@@ -1,10 +1,16 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+  // LLM provider (OpenAI-compatible: OpenAI, OpenRouter, Ollama, etc.)
+  LLM_API_KEY: z.string().min(1, "LLM_API_KEY is required"),
+  LLM_BASE_URL: z.string().default("https://api.openai.com/v1"),
+  LLM_MODEL: z.string().default("gpt-4o-mini"),
   PORT: z.coerce.number().default(3001),
-  DATABASE_URL: z.string().default("./data/advisor.sqlite"),
+  DATABASE_URL: z.string().default("file:data/advisor.db"),
   CLIENT_ORIGIN: z.string().default("http://localhost:5173"),
+  // Turso credentials (optional: when absent, runs as local SQLite)
+  TURSO_DATABASE_URL: z.string().nullable().default(null),
+  TURSO_AUTH_TOKEN: z.string().nullable().default(null),
 });
 
 export type Env = z.infer<typeof envSchema>;

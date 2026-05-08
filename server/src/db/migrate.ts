@@ -1,14 +1,23 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { createDatabase } from "./index.js";
+import { migrate } from "drizzle-orm/libsql/migrator";
+import { closeDatabase, createDatabase } from "./index.js";
 
-const databaseUrl = process.env["DATABASE_URL"] ?? "./data/advisor.sqlite";
+const databaseUrl = process.env["DATABASE_URL"] ?? "file:data/advisor.db";
 
-mkdirSync(dirname(databaseUrl), { recursive: true });
+// Ensure parent directory exists for file-based databases
+if (databaseUrl.startsWith("file:")) {
+  mkdirSync(dirname(databaseUrl.replace("file:", "")), { recursive: true });
+}
 
-const db = createDatabase(databaseUrl);
+const conn = createDatabase({
+  url: databaseUrl,
+  syncUrl: process.env["TURSO_DATABASE_URL"] ?? null,
+  authToken: process.env["TURSO_AUTH_TOKEN"] ?? null,
+});
 
-migrate(db, { migrationsFolder: "./drizzle" });
+await migrate(conn.db, { migrationsFolder: "./drizzle" });
 
 console.log("Migrations applied successfully.");
+
+closeDatabase(conn);

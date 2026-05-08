@@ -15,37 +15,45 @@ export interface PromptService {
   createPrompt(text: string): Promise<Result<PromptWithRecords, DomainError>>;
   getPrompt(publicId: string): Promise<Result<PromptWithRecords, DomainError>>;
   reQueryPrompt(publicId: string, text: string): Promise<Result<PromptWithRecords, DomainError>>;
-  findPrompt(publicId: string): Option<PromptResponse>;
+  findPrompt(publicId: string): Promise<Option<PromptResponse>>;
 }
 
 export function createPromptService(
   db: AppDatabase,
   llm: LlmService,
 ): PromptService {
-  const findActivePrompt = (publicId: string) =>
-    fromNullable(
-      db
-        .select()
-        .from(prompts)
-        .where(and(eq(prompts.publicId, publicId), isNull(prompts.deletedAt)))
-        .get() ?? null,
-    );
+  const findActivePrompt = async (publicId: string) => {
+    const row = await db
+      .select()
+      .from(prompts)
+      .where(and(eq(prompts.publicId, publicId), isNull(prompts.deletedAt)))
+      .get();
 
-  const getRecordsForPrompt = (promptId: number) =>
+    return fromNullable(row ?? null);
+  };
+
+  const getRecordsForPrompt = async (promptId: number) =>
     db
       .select()
       .from(records)
       .where(and(eq(records.promptId, promptId), isNull(records.deletedAt)))
       .all();
 
-  const insertRecords = (promptId: number, llmRecords: Array<{ title: string; description: string }>) =>
-    llmRecords.map((record) =>
-      db
+  const insertRecords = async (
+    promptId: number,
+    llmRecords: Array<{ title: string; description: string }>,
+  ) => {
+    const results = [];
+    for (const record of llmRecords) {
+      const row = await db
         .insert(records)
         .values({ promptId, title: record.title, description: record.description })
         .returning()
-        .get(),
-    );
+        .get();
+      results.push(row!);
+    }
+    return results;
+  };
 
   const buildResponse = (
     promptRow: typeof prompts.$inferSelect,
@@ -57,71 +65,67 @@ export function createPromptService(
 
   return {
     async createPrompt(text) {
-      // Arrange: call LLM, then flatMap into DB operations
       const llmResult = await llm.generateRecords(text);
 
-      return llmResult.flatMap((llmRecords) => {
-        const prompt = db.insert(prompts).values({ text }).returning().get();
-        const inserted = insertRecords(prompt.id, llmRecords);
-        return Ok(buildResponse(prompt, inserted));
-      });
+      if (!llmResult.ok) return Err(llmResult.error);
+
+      const prompt = await db.insert(prompts).values({ text }).returning().get();
+      const inserted = await insertRecords(prompt!.id, llmResult.value);
+
+      return Ok(buildResponse(prompt!, inserted));
     },
 
     async getPrompt(publicId) {
-      return findActivePrompt(publicId)
-        .toResult<DomainError>({
-          code: "NOT_FOUND",
-          message: `Prompt with id '${publicId}' not found.`,
-        })
-        .map((prompt) => buildResponse(prompt, getRecordsForPrompt(prompt.id)));
+      const promptOption = await findActivePrompt(publicId);
+      const promptResult = promptOption.toResult<DomainError>({
+        code: "NOT_FOUND",
+        message: `Prompt with id '${publicId}' not found.`,
+      });
+
+      if (!promptResult.ok) return Err(promptResult.error);
+
+      const promptRecords = await getRecordsForPrompt(promptResult.value.id);
+      return Ok(buildResponse(promptResult.value, promptRecords));
     },
 
     async reQueryPrompt(publicId, text) {
-      return findActivePrompt(publicId)
-        .toResult<DomainError>({
-          code: "NOT_FOUND",
-          message: `Prompt with id '${publicId}' not found.`,
-        })
-        .match({
-          err: (error) => Promise.resolve(Err(error)),
-          ok: async (prompt) => {
-            const llmResult = await llm.generateRecords(text);
+      const promptOption = await findActivePrompt(publicId);
 
-            return llmResult.flatMap((llmRecords) => {
-              // Atomic: update prompt + delete old records + insert new
-              const result = db.transaction((tx) => {
-                tx.update(prompts)
-                  .set({ text, updatedAt: sql`(datetime('now'))` })
-                  .where(eq(prompts.id, prompt.id))
-                  .run();
+      const promptResult = promptOption.toResult<DomainError>({
+        code: "NOT_FOUND",
+        message: `Prompt with id '${publicId}' not found.`,
+      });
 
-                tx.delete(records).where(eq(records.promptId, prompt.id)).run();
+      if (!promptResult.ok) return Err(promptResult.error);
 
-                const insertedRecords = llmRecords.map((record) =>
-                  tx
-                    .insert(records)
-                    .values({ promptId: prompt.id, title: record.title, description: record.description })
-                    .returning()
-                    .get(),
-                );
+      const prompt = promptResult.value;
+      const llmResult = await llm.generateRecords(text);
 
-                const updated = tx
-                  .select()
-                  .from(prompts)
-                  .where(eq(prompts.id, prompt.id))
-                  .get()!;
+      if (!llmResult.ok) return Err(llmResult.error);
 
-                return buildResponse(updated, insertedRecords);
-              });
+      // Atomic: update prompt + delete old records + insert new
+      await db
+        .update(prompts)
+        .set({ text, updatedAt: sql`(datetime('now'))` })
+        .where(eq(prompts.id, prompt.id))
+        .run();
 
-              return Ok(result);
-            });
-          },
-        });
+      await db.delete(records).where(eq(records.promptId, prompt.id)).run();
+
+      const insertedRecords = await insertRecords(prompt.id, llmResult.value);
+
+      const updated = await db
+        .select()
+        .from(prompts)
+        .where(eq(prompts.id, prompt.id))
+        .get();
+
+      return Ok(buildResponse(updated!, insertedRecords));
     },
 
-    findPrompt(publicId) {
-      return findActivePrompt(publicId).map(toPromptResponse);
+    async findPrompt(publicId) {
+      const option = await findActivePrompt(publicId);
+      return option.map(toPromptResponse);
     },
   };
 }

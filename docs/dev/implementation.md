@@ -19,10 +19,10 @@ advisor/
 │       ├── app.ts                   # Hono app assembly + middleware chain
 │       ├── env.ts                   # zod env validation
 │       ├── lib/
-│       │   ├── result.ts            # Result<T,E>, Option<T>, tryCatch
+│       │   ├── result.ts            # Result<T,E>, Option<T>, pipe, tryCatch
 │       │   └── types.ts             # shared domain types, AppContext
 │       ├── db/
-│       │   ├── index.ts             # SQLite connection (WAL mode)
+│       │   ├── index.ts             # Turso/libSQL connection (local file or remote)
 │       │   ├── schema.ts            # Drizzle table definitions
 │       │   └── migrations/          # versioned SQL files
 │       ├── middleware/

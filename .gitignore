@@ -10,10 +10,14 @@ dist/
 .env.local
 
 # Database
+*.db
+*.db-journal
+*.db-shm
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+data/
 
 # IDE
 .vscode/
@@ -25,8 +29,9 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Internal / AI working docs
+# Internal
 .local/
+.claude/
 
 # Assessment source
 assesment.pdf

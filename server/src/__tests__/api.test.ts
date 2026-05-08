@@ -1,7 +1,7 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
-import { createDatabase, type AppDatabase } from "../db/index.js";
+import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
 import { Err, Ok } from "../lib/result.js";
 import type { LlmService } from "../services/llm.service.js";
 import { jsonBody, patchJson, postJson } from "./helpers.js";
@@ -43,21 +43,21 @@ function createMockLlm(overrides?: Partial<LlmService>): LlmService {
 }
 
 describe("API Integration", () => {
-  let db: AppDatabase;
+  let conn: DatabaseConnection;
   let app: ReturnType<typeof createApp>;
 
-  beforeEach(() => {
-    db = createDatabase(":memory:");
-    migrate(db, { migrationsFolder: "./drizzle" });
+  beforeEach(async () => {
+    conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
+    await migrate(conn.db, { migrationsFolder: "./drizzle" });
     app = createApp({
-      db,
+      db: conn.db,
       llm: createMockLlm(),
       clientOrigin: "http://localhost:5173",
     });
   });
 
   afterEach(() => {
-    db.$client.close();
+    closeDatabase(conn);
   });
 
   describe("GET /api/health", () => {
@@ -107,7 +107,7 @@ describe("API Integration", () => {
     it("returns LLM error status when LLM fails", async () => {
       // Arrange
       const failApp = createApp({
-        db,
+        db: conn.db,
         llm: createMockLlm({
           generateRecords: () =>
             Promise.resolve(Err({ code: "LLM_TIMEOUT", message: "Timed out" })),
@@ -159,7 +159,7 @@ describe("API Integration", () => {
       const created = await jsonBody<PromptData>(createRes);
 
       const reQueryApp = createApp({
-        db,
+        db: conn.db,
         llm: createMockLlm({
           generateRecords: () =>
             Promise.resolve(Ok([{ title: "New Tip", description: "New desc" }])),

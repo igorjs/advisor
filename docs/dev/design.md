@@ -10,8 +10,8 @@ Full-stack LLM advisor application. Users submit prompts, receive structured adv
 |-------|--------|-----|
 | Package manager | pnpm workspaces | Built-in orchestration, strict dependency resolution, disk efficient |
 | Backend | Hono | Lightweight, fast, built-in middleware, excellent testing via `app.request()` |
-| ORM | Drizzle | Type-safe queries, SQLite support via better-sqlite3, versioned migrations |
-| Database | SQLite (WAL mode) | Zero infrastructure, embedded, sufficient for MVP |
+| ORM | Drizzle | Type-safe queries, libSQL/Turso support, versioned migrations |
+| Database | Turso (libSQL) | SQLite-compatible. Local file mode for development, Turso remote for production. Zero-config locally, production-ready with edge replication when Turso credentials are set. |
 | LLM | OpenAI SDK | Provider-agnostic API shape (compatible with Ollama, Groq, etc.) |
 | Frontend | React + Vite | Standard tooling, fast HMR |
 | Data fetching | @tanstack/react-query | Required by brief. Provides caching, optimistic updates, retry |
@@ -98,10 +98,11 @@ idempotency_keys (
 ```
 
 Key decisions:
+- **Turso/libSQL**: local file mode (`file:data/advisor.db`) when no Turso credentials are set. When `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are provided, operates as an embedded replica with edge sync. This enables a smooth path to multi-tenant SaaS: each tenant could get their own Turso database, resolved at connection time.
 - **Nullable `user_id`**: future multi-tenant without schema migration
 - **Soft deletes** (`deleted_at`): audit trail for future SaaS. Drizzle query helper enforces the filter globally.
 - **FK cascade delete**: prompt deletion cascades to records
-- **Re-query**: UPDATE prompt text + DELETE old records + INSERT new records, wrapped in a transaction. Preserves prompt identity (stable publicId).
+- **Re-query**: UPDATE prompt text + DELETE old records + INSERT new records. Preserves prompt identity (stable publicId).
 
 ## Backend Architecture
 

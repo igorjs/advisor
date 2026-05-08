@@ -1,6 +1,6 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createDatabase, type AppDatabase } from "../db/index.js";
+import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
 import { Err, Ok } from "../lib/result.js";
 import type { LlmService } from "../services/llm.service.js";
 import { createPromptService, type PromptService } from "../services/prompt.service.js";
@@ -20,17 +20,17 @@ function createMockLlm(overrides?: Partial<LlmService>): LlmService {
 }
 
 describe("PromptService", () => {
-  let db: AppDatabase;
+  let conn: DatabaseConnection;
   let promptService: PromptService;
 
-  beforeEach(() => {
-    db = createDatabase(":memory:");
-    migrate(db, { migrationsFolder: "./drizzle" });
-    promptService = createPromptService(db, createMockLlm());
+  beforeEach(async () => {
+    conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
+    await migrate(conn.db, { migrationsFolder: "./drizzle" });
+    promptService = createPromptService(conn.db, createMockLlm());
   });
 
   afterEach(() => {
-    db.$client.close();
+    closeDatabase(conn);
   });
 
   describe("createPrompt", () => {
@@ -51,7 +51,7 @@ describe("PromptService", () => {
     it("returns Err when LLM fails", async () => {
       // Arrange
       const service = createPromptService(
-        db,
+        conn.db,
         createMockLlm({
           generateRecords: () =>
             Promise.resolve(Err({ code: "LLM_TIMEOUT", message: "Timed out" })),
@@ -105,7 +105,7 @@ describe("PromptService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       const service = createPromptService(
-        db,
+        conn.db,
         createMockLlm({
           generateRecords: () =>
             Promise.resolve(
@@ -147,7 +147,7 @@ describe("PromptService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       const service = createPromptService(
-        db,
+        conn.db,
         createMockLlm({
           generateRecords: () =>
             Promise.resolve(Err({ code: "LLM_ERROR", message: "API down" })),
@@ -183,7 +183,7 @@ describe("PromptService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       // Act
-      const option = promptService.findPrompt(created.value.publicId);
+      const option = await promptService.findPrompt(created.value.publicId);
 
       // Assert
       expect(option.some).toBe(true);
@@ -192,9 +192,9 @@ describe("PromptService", () => {
       }
     });
 
-    it("returns None when prompt does not exist", () => {
+    it("returns None when prompt does not exist", async () => {
       // Act
-      const option = promptService.findPrompt("nonexistent");
+      const option = await promptService.findPrompt("nonexistent");
 
       // Assert
       expect(option.some).toBe(false);
@@ -203,19 +203,19 @@ describe("PromptService", () => {
 });
 
 describe("RecordService", () => {
-  let db: AppDatabase;
+  let conn: DatabaseConnection;
   let promptService: PromptService;
   let recordService: RecordService;
 
   beforeEach(async () => {
-    db = createDatabase(":memory:");
-    migrate(db, { migrationsFolder: "./drizzle" });
-    promptService = createPromptService(db, createMockLlm());
-    recordService = createRecordService(db);
+    conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
+    await migrate(conn.db, { migrationsFolder: "./drizzle" });
+    promptService = createPromptService(conn.db, createMockLlm());
+    recordService = createRecordService(conn.db);
   });
 
   afterEach(() => {
-    db.$client.close();
+    closeDatabase(conn);
   });
 
   describe("getRecords", () => {
@@ -225,7 +225,7 @@ describe("RecordService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       // Act
-      const result = recordService.getRecords(created.value.publicId);
+      const result = await recordService.getRecords(created.value.publicId);
 
       // Assert
       expect(result.ok).toBe(true);
@@ -234,9 +234,9 @@ describe("RecordService", () => {
       }
     });
 
-    it("returns NOT_FOUND for unknown prompt", () => {
+    it("returns NOT_FOUND for unknown prompt", async () => {
       // Act
-      const result = recordService.getRecords("nonexistent");
+      const result = await recordService.getRecords("nonexistent");
 
       // Assert
       expect(result.ok).toBe(false);
@@ -254,7 +254,7 @@ describe("RecordService", () => {
       const recordId = created.value.records[0]?.publicId ?? "";
 
       // Act
-      const result = recordService.updateRecord(
+      const result = await recordService.updateRecord(
         created.value.publicId,
         recordId,
         { title: "Updated Title" },
@@ -275,7 +275,7 @@ describe("RecordService", () => {
       const recordId = created.value.records[0]?.publicId ?? "";
 
       // Act
-      const result = recordService.updateRecord(
+      const result = await recordService.updateRecord(
         created.value.publicId,
         recordId,
         { description: "Updated desc" },
@@ -294,7 +294,7 @@ describe("RecordService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       // Act
-      const result = recordService.updateRecord(
+      const result = await recordService.updateRecord(
         created.value.publicId,
         "nonexistent",
         { title: "X" },
@@ -316,7 +316,7 @@ describe("RecordService", () => {
       const recordId = created.value.records[0]?.publicId ?? "";
 
       // Act
-      const deleteResult = recordService.deleteRecord(
+      const deleteResult = await recordService.deleteRecord(
         created.value.publicId,
         recordId,
       );
@@ -324,7 +324,7 @@ describe("RecordService", () => {
       // Assert
       expect(deleteResult.ok).toBe(true);
 
-      const remaining = recordService.getRecords(created.value.publicId);
+      const remaining = await recordService.getRecords(created.value.publicId);
       expect(remaining.ok).toBe(true);
       if (remaining.ok) {
         expect(remaining.value).toHaveLength(1);
@@ -337,7 +337,7 @@ describe("RecordService", () => {
       if (!created.ok) throw new Error("Setup failed");
 
       // Act
-      const result = recordService.deleteRecord(
+      const result = await recordService.deleteRecord(
         created.value.publicId,
         "nonexistent",
       );

@@ -13,27 +13,28 @@ const updateRecordSchema = z
   });
 
 export function createRecordRoutes(recordService: RecordService) {
-  const records = new Hono();
+  const recordRoutes = new Hono();
 
-  records.get("/", (c) => {
+  recordRoutes.get("/", async (c) => {
     const promptId = c.req.param("promptId") ?? "";
+    const result = await recordService.getRecords(promptId);
 
     return matchResult(
       c,
-      recordService.getRecords(promptId).map((recs) => ({
+      result.map((recs) => ({
         records: recs,
         meta: { total: recs.length, page: 1, pageSize: recs.length },
       })),
     );
   });
 
-  records.patch("/:recordId", async (c) => {
+  recordRoutes.patch("/:recordId", async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = updateRecordSchema.safeParse(body);
 
     if (!parsed.success) return validationError(c, parsed.error.issues);
 
-    const result = recordService.updateRecord(
+    const result = await recordService.updateRecord(
       c.req.param("promptId") ?? "",
       c.req.param("recordId"),
       parsed.data,
@@ -41,8 +42,8 @@ export function createRecordRoutes(recordService: RecordService) {
     return matchResult(c, result);
   });
 
-  records.delete("/:recordId", (c) => {
-    const result = recordService.deleteRecord(
+  recordRoutes.delete("/:recordId", async (c) => {
+    const result = await recordService.deleteRecord(
       c.req.param("promptId") ?? "",
       c.req.param("recordId"),
     );
@@ -53,5 +54,5 @@ export function createRecordRoutes(recordService: RecordService) {
     });
   });
 
-  return records;
+  return recordRoutes;
 }

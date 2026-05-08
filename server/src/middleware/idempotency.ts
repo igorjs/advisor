@@ -24,21 +24,21 @@ export function createIdempotencyMiddleware(
 
     // Purge expired keys on-request
     const cutoff = new Date(Date.now() - TTL_MS).toISOString();
-    db.delete(idempotencyKeys).where(lt(idempotencyKeys.createdAt, cutoff)).run();
+    await db.delete(idempotencyKeys).where(lt(idempotencyKeys.createdAt, cutoff)).run();
 
     // Check for existing key
-    const existing = db
+    const existing = await db
       .select()
       .from(idempotencyKeys)
       .where(eq(idempotencyKeys.key, key))
       .get();
 
     if (existing) {
-      const cached = JSON.parse(existing.response) as {
-        status: number;
-        body: unknown;
-      };
-      return c.json(cached.body, cached.status as 200);
+      const cached = JSON.parse(existing.response);
+      return new Response(JSON.stringify(cached.body), {
+        status: cached.status,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Execute the handler
@@ -47,12 +47,12 @@ export function createIdempotencyMiddleware(
     // Cache the response
     if (c.res.status < 400) {
       const cloned = c.res.clone();
-      const body = await cloned.json();
-      db.insert(idempotencyKeys)
+      const body = await cloned.text();
+      await db.insert(idempotencyKeys)
         .values({
           key,
           endpoint: `${c.req.method} ${c.req.path}`,
-          response: JSON.stringify({ status: c.res.status, body }),
+          response: JSON.stringify({ status: c.res.status, body: JSON.parse(body) }),
         })
         .run();
     }

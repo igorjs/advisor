@@ -1,12 +1,9 @@
 import OpenAI from "openai";
 import { z } from "zod";
+import { LLM_TIMEOUT_MS } from "../config/llm.js";
 import { SYSTEM_PROMPT } from "../config/prompts.js";
 import { Err, Ok, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
-
-// 30s is generous but necessary: structured output from smaller models can
-// be slow, and the default OpenAI SDK timeout (10min) wastes user attention
-const LLM_TIMEOUT_MS = 30_000;
 
 // Validated against every LLM response to guarantee our DB gets clean data,
 // regardless of which model or provider is configured

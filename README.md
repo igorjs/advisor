@@ -41,14 +41,14 @@ When both are set, the app runs as an embedded replica with automatic sync.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start both client and server in development mode |
-| `pnpm test` | Run all tests |
-| `pnpm test:watch` | Run server tests in watch mode |
-| `pnpm build` | Build both client and server |
-| `pnpm db:generate` | Generate a new database migration |
-| `pnpm db:migrate` | Apply pending migrations |
+| Command            | Description                                      |
+| ------------------ | ------------------------------------------------ |
+| `pnpm dev`         | Start both client and server in development mode |
+| `pnpm test`        | Run all tests                                    |
+| `pnpm test:watch`  | Run server tests in watch mode                   |
+| `pnpm build`       | Build both client and server                     |
+| `pnpm db:generate` | Generate a new database migration                |
+| `pnpm db:migrate`  | Apply pending migrations                         |
 
 ## Project Structure
 
@@ -69,6 +69,7 @@ advisor/
 
 ## Design Docs
 
+- [Requirements](docs/dev/requirements.md) - Initial project requirements for this project
 - [Design Decisions](docs/dev/design.md) - Architecture, API design, error handling philosophy
 - [Implementation Plan](docs/dev/implementation.md) - File structure, build order, testing approach
 
@@ -95,6 +96,7 @@ pnpm test:watch
 ```
 
 Tests are organised by layer:
+
 - **Unit:** Result/Option/pipe library, LLM service contract
 - **Middleware:** error handler status mapping, rate limiter behaviour
 - **Service:** prompt CRUD, record CRUD, re-query atomicity, LLM failure propagation

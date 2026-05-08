@@ -1,4 +1,8 @@
 import type { MiddlewareHandler } from "hono";
+import {
+  RATE_LIMIT_MAX_REQUESTS,
+  RATE_LIMIT_WINDOW_MS,
+} from "../config/rate-limit.js";
 
 interface RateLimitEntry {
   count: number;
@@ -10,8 +14,8 @@ interface RateLimitEntry {
  * Resets on server restart. For production, use Redis-backed implementation.
  */
 export function createRateLimiter(
-  maxRequests: number = 10,
-  windowMs: number = 60_000,
+  maxRequests: number = RATE_LIMIT_MAX_REQUESTS,
+  windowMs: number = RATE_LIMIT_WINDOW_MS,
 ): MiddlewareHandler {
   const store = new Map<string, RateLimitEntry>();
 

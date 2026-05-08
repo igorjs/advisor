@@ -1,9 +1,8 @@
 import { eq, lt } from "drizzle-orm";
 import type { MiddlewareHandler } from "hono";
+import { IDEMPOTENCY_TTL_MS } from "../config/idempotency.js";
 import type { AppDatabase } from "../db/index.js";
 import { idempotencyKeys } from "../db/schema.js";
-
-const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
  * Idempotency middleware for mutation endpoints.
@@ -23,7 +22,7 @@ export function createIdempotencyMiddleware(
     }
 
     // Purge expired keys on-request
-    const cutoff = new Date(Date.now() - TTL_MS).toISOString();
+    const cutoff = new Date(Date.now() - IDEMPOTENCY_TTL_MS).toISOString();
     await db.delete(idempotencyKeys).where(lt(idempotencyKeys.createdAt, cutoff)).run();
 
     // Check for existing key

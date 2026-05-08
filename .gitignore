@@ -32,7 +32,3 @@ Thumbs.db
 # Internal
 .local/
 .claude/
-
-# Assessment source
-assesment.pdf
-assessment.md

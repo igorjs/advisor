@@ -43,7 +43,7 @@ export function createApp({ db, llm, clientOrigin }: AppDependencies) {
   // Rate limiter and idempotency only on mutations, not reads.
   // LLM calls cost money per request, so rate limiting protects the budget.
   // Idempotency prevents duplicate LLM calls on network retries.
-  const rateLimiter = createRateLimiter(10, 60_000);
+  const rateLimiter = createRateLimiter();
   const idempotency = createIdempotencyMiddleware(db);
 
   app.route("/api/health", health);

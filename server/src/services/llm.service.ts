@@ -4,8 +4,12 @@ import { SYSTEM_PROMPT } from "../config/prompts.js";
 import { Err, Ok, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 
+// 30s is generous but necessary: structured output from smaller models can
+// be slow, and the default OpenAI SDK timeout (10min) wastes user attention
 const LLM_TIMEOUT_MS = 30_000;
 
+// Validated against every LLM response to guarantee our DB gets clean data,
+// regardless of which model or provider is configured
 const responseSchema = z.object({
   records: z.array(
     z.object({
@@ -29,6 +33,11 @@ export interface LlmService {
   ): Promise<Result<LlmRecord[], DomainError>>;
 }
 
+/**
+ * Uses the OpenAI SDK as a universal LLM client. Any provider with an
+ * OpenAI-compatible API works (OpenRouter, Google AI Studio, Ollama)
+ * by changing baseUrl in the config. Zero code changes to switch providers.
+ */
 export function createLlmService(config: LlmServiceConfig): LlmService {
   const client = new OpenAI({
     apiKey: config.apiKey,
@@ -47,6 +56,9 @@ export function createLlmService(config: LlmServiceConfig): LlmService {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: prompt },
           ],
+          // json_object mode works across all OpenAI-compatible providers.
+          // OpenAI's stricter json_schema mode (zodResponseFormat) only works
+          // with models that support it natively.
           response_format: { type: "json_object" },
         });
 
@@ -59,7 +71,8 @@ export function createLlmService(config: LlmServiceConfig): LlmService {
           });
         }
 
-        // Strip markdown code fences if the model wraps JSON in them
+        // Some models (Gemini) wrap JSON in markdown code fences despite
+        // being told not to. Strip them before parsing to stay robust.
         const content = rawContent
           .replace(/^```(?:json)?\s*\n?/i, "")
           .replace(/\n?```\s*$/i, "")

@@ -20,38 +20,47 @@ interface AppDependencies {
   clientOrigin: string;
 }
 
+/**
+ * Dependencies are injected rather than imported globally so the app
+ * can be instantiated with test doubles (mock LLM, in-memory DB).
+ */
 export function createApp({ db, llm, clientOrigin }: AppDependencies) {
   const app = new Hono();
 
-  // Global middleware
+  // Middleware order matters: logger first (to capture timing), security
+  // headers early (before any response), CORS before routes, context last
+  // (depends on requestId from logger)
   app.use("*", loggerMiddleware);
   app.use("*", securityMiddleware);
   app.use("*", createCorsMiddleware(clientOrigin));
   app.use("*", contextMiddleware);
+  // Safety net for unhandled errors; services use Result so this rarely fires
   app.onError(errorHandler);
 
-  // Services
   const promptService = createPromptService(db, llm);
   const recordService = createRecordService(db);
 
-  // Rate limiter + idempotency on mutations
+  // Rate limiter and idempotency only on mutations, not reads.
+  // LLM calls cost money per request, so rate limiting protects the budget.
+  // Idempotency prevents duplicate LLM calls on network retries.
   const rateLimiter = createRateLimiter(10, 60_000);
   const idempotency = createIdempotencyMiddleware(db);
 
-  // Routes
   app.route("/api/health", health);
 
+  // Versioned API: /api/v1/ prefix so future breaking changes don't
+  // require migrating existing clients
   const v1 = new Hono();
 
   const promptRoutes = createPromptRoutes(promptService);
   const recordRoutes = createRecordRoutes(recordService);
 
-  // Apply rate limiter and idempotency to mutation routes
   v1.use("/prompts", rateLimiter);
   v1.use("/prompts", idempotency);
   v1.use("/prompts/:promptId/records/:recordId", rateLimiter);
 
   v1.route("/prompts", promptRoutes);
+  // Nested under prompts: records are owned by a prompt, the URL reflects this
   v1.route("/prompts/:promptId/records", recordRoutes);
 
   app.route("/api/v1", v1);

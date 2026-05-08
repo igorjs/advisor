@@ -3,12 +3,15 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const prompts = sqliteTable("prompts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  // UUIDs exposed via API instead of sequential IDs to prevent enumeration attacks
   publicId: text("public_id")
     .notNull()
     .unique()
     .$defaultFn(() => crypto.randomUUID()),
+  // Nullable: populated when auth is added, enables per-tenant data isolation
   userId: text("user_id"),
   text: text("text").notNull(),
+  // Soft delete over hard delete: preserves audit trail for future SaaS compliance
   deletedAt: text("deleted_at"),
   createdAt: text("created_at")
     .notNull()
@@ -24,6 +27,7 @@ export const records = sqliteTable("records", {
     .notNull()
     .unique()
     .$defaultFn(() => crypto.randomUUID()),
+  // FK cascade: when a prompt is deleted, its records go with it
   promptId: integer("prompt_id")
     .notNull()
     .references(() => prompts.id, { onDelete: "cascade" }),

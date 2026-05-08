@@ -1,3 +1,9 @@
+/**
+ * HTTP response helpers that bridge Result<T, DomainError> to Hono responses.
+ * Routes stay thin: validate input, call service, pass Result to matchResult().
+ * No try/catch in route handlers because services never throw.
+ */
+
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { DomainError, ErrorCode } from "./types.js";

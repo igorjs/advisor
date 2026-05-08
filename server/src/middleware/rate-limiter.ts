@@ -15,7 +15,8 @@ export function createRateLimiter(
 ): MiddlewareHandler {
   const store = new Map<string, RateLimitEntry>();
 
-  // Periodic cleanup to prevent memory leak
+  // Without cleanup, the Map grows unbounded as new IPs hit the server.
+  // .unref() lets Node exit even if this timer is still running.
   setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of store) {
@@ -26,6 +27,8 @@ export function createRateLimiter(
   }, windowMs).unref();
 
   return async (c, next) => {
+    // First entry in x-forwarded-for is the real client IP when behind a proxy.
+    // Falls back to "unknown" so the limiter still works without a proxy.
     const ip =
       c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const now = Date.now();

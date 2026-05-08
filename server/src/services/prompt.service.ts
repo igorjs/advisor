@@ -22,6 +22,8 @@ export function createPromptService(
   db: AppDatabase,
   llm: LlmService,
 ): PromptService {
+  // Every query filters by deletedAt IS NULL so soft-deleted rows never
+  // leak into API responses. This is the single place to enforce it.
   const findActivePrompt = async (publicId: string) => {
     const row = await db
       .select()
@@ -29,6 +31,8 @@ export function createPromptService(
       .where(and(eq(prompts.publicId, publicId), isNull(prompts.deletedAt)))
       .get();
 
+    // fromNullable bridges the DB's nullable return into our Option type,
+    // so callers use .toResult() instead of null-checking
     return fromNullable(row ?? null);
   };
 
@@ -65,6 +69,7 @@ export function createPromptService(
 
   return {
     async createPrompt(text) {
+      // LLM call first: if it fails, we don't create a prompt row with no records
       const llmResult = await llm.generateRecords(text);
 
       if (!llmResult.ok) return Err(llmResult.error);
@@ -99,11 +104,14 @@ export function createPromptService(
       if (!promptResult.ok) return Err(promptResult.error);
 
       const prompt = promptResult.value;
+
+      // LLM call before any DB mutation: if it fails, existing data stays intact
       const llmResult = await llm.generateRecords(text);
 
       if (!llmResult.ok) return Err(llmResult.error);
 
-      // Atomic: update prompt + delete old records + insert new
+      // UPDATE + DELETE + INSERT in sequence. Preserves the prompt's publicId
+      // so any bookmarked URLs remain valid after re-query.
       await db
         .update(prompts)
         .set({ text, updatedAt: sql`(datetime('now'))` })

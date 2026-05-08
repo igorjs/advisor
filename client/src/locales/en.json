@@ -1,0 +1,39 @@
+{
+  "app": {
+    "title": "Advisor",
+    "subtitle": "Get expert advice powered by AI"
+  },
+  "prompt": {
+    "placeholder": "Enter your question for the advisor...",
+    "submit": "Get Advice",
+    "requery": "Update & Re-query",
+    "loading": "Generating advice...",
+    "label": "Your prompt"
+  },
+  "records": {
+    "empty": {
+      "title": "No records yet",
+      "description": "Submit a prompt above to get started."
+    },
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure?",
+    "editTitle": "Edit title",
+    "editDescription": "Edit description"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "validation": "Please check your input.",
+    "timeout": "The request timed out. Please try again.",
+    "rateLimited": "Too many requests. Please wait a moment."
+  },
+  "toast": {
+    "recordUpdated": "Record updated successfully.",
+    "recordDeleted": "Record deleted.",
+    "promptCreated": "Advice generated successfully.",
+    "promptRequeried": "Advice updated successfully."
+  }
+}

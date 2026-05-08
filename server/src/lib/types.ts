@@ -25,35 +25,3 @@ export type ErrorCode =
   | "LLM_PARSE_ERROR"
   | "LLM_ERROR"
   | "INTERNAL_ERROR";
-
-/** Maps error codes to HTTP status codes. */
-export const ERROR_STATUS_MAP: Record<ErrorCode, number> = {
-  VALIDATION_ERROR: 400,
-  NOT_FOUND: 404,
-  CONFLICT: 409,
-  RATE_LIMITED: 429,
-  LLM_TIMEOUT: 504,
-  LLM_PARSE_ERROR: 502,
-  LLM_ERROR: 502,
-  INTERNAL_ERROR: 500,
-};
-
-/** Paginated API response wrapper. */
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    total: number;
-    page: number;
-    pageSize: number;
-  };
-}
-
-/** Single item API response wrapper. */
-export interface DataResponse<T> {
-  data: T;
-}
-
-/** Structured API error response. */
-export interface ErrorResponse {
-  error: DomainError;
-}

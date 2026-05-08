@@ -1,5 +1,5 @@
 /**
- * Lightweight Result, Option, pipe, and tryCatch inspired by pure-fx.
+ * Lightweight Result and Option types inspired by pure-fx.
  * Errors are values, not exceptions.
  */
 
@@ -14,8 +14,6 @@ export interface Result<T, E> {
   map<U>(fn: (value: T) => U): Result<U, E>;
   flatMap<U>(fn: (value: T) => Result<U, E>): Result<U, E>;
   match<U>(matcher: { ok: (value: T) => U; err: (error: E) => U }): U;
-  unwrap(): T;
-  unwrapOr(fallback: T): T;
 }
 
 export function Ok<T, E = never>(value: T): Result<T, E> {
@@ -27,8 +25,6 @@ export function Ok<T, E = never>(value: T): Result<T, E> {
     flatMap: <U>(fn: (value: T) => Result<U, E>) => fn(value),
     match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) =>
       matcher.ok(value),
-    unwrap: () => value,
-    unwrapOr: () => value,
   };
 }
 
@@ -41,10 +37,6 @@ export function Err<T = never, E = string>(error: E): Result<T, E> {
     flatMap: <U>() => Err<U, E>(error),
     match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) =>
       matcher.err(error),
-    unwrap() {
-      throw error instanceof Error ? error : new Error(String(error));
-    },
-    unwrapOr: (fallback: T) => fallback,
   };
 }
 
@@ -58,8 +50,6 @@ export interface Option<T> {
   map<U>(fn: (value: T) => U): Option<U>;
   flatMap<U>(fn: (value: T) => Option<U>): Option<U>;
   match<U>(matcher: { some: (value: T) => U; none: () => U }): U;
-  unwrap(): T;
-  unwrapOr(fallback: T): T;
   toResult<E>(error: E): Result<T, E>;
 }
 
@@ -71,8 +61,6 @@ export function Some<T>(value: T): Option<T> {
     flatMap: <U>(fn: (value: T) => Option<U>) => fn(value),
     match: <U>(matcher: { some: (value: T) => U; none: () => U }) =>
       matcher.some(value),
-    unwrap: () => value,
-    unwrapOr: () => value,
     toResult: <E>() => Ok<T, E>(value),
   };
 }
@@ -85,10 +73,6 @@ export function None<T = never>(): Option<T> {
     flatMap: <U>() => None<U>(),
     match: <U>(matcher: { some: (value: T) => U; none: () => U }) =>
       matcher.none(),
-    unwrap() {
-      throw new Error("unwrap called on None");
-    },
-    unwrapOr: (fallback: T) => fallback,
     toResult: <E>(error: E) => Err<T, E>(error),
   };
 }
@@ -96,68 +80,4 @@ export function None<T = never>(): Option<T> {
 /** Convert a nullable value to Option. null becomes None, non-null becomes Some. */
 export function fromNullable<T>(value: T | null): Option<T> {
   return value !== null ? Some(value) : None();
-}
-
-// ---------------------------------------------------------------------------
-// pipe
-// ---------------------------------------------------------------------------
-
-export function pipe<A>(a: A): A;
-export function pipe<A, B>(a: A, ab: (a: A) => B): B;
-export function pipe<A, B, C>(a: A, ab: (a: A) => B, bc: (b: B) => C): C;
-export function pipe<A, B, C, D>(
-  a: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-): D;
-export function pipe<A, B, C, D, E>(
-  a: A,
-  ab: (a: A) => B,
-  bc: (b: B) => C,
-  cd: (c: C) => D,
-  de: (d: D) => E,
-): E;
-export function pipe(
-  value: unknown,
-  ...fns: Array<(input: never) => unknown>
-): unknown {
-  let result = value;
-  for (const fn of fns) {
-    result = fn(result as never);
-  }
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// tryCatch
-// ---------------------------------------------------------------------------
-
-export function tryCatch<T, E>(
-  fn: () => Promise<T>,
-  onError: (error: Error) => E,
-): Promise<Result<T, E>>;
-export function tryCatch<T, E>(
-  fn: () => T,
-  onError: (error: Error) => E,
-): Result<T, E>;
-export function tryCatch<T, E>(
-  fn: () => T | Promise<T>,
-  onError: (error: Error) => E,
-): Result<T, E> | Promise<Result<T, E>> {
-  try {
-    const value = fn();
-
-    if (value instanceof Promise) {
-      return value
-        .then((v) => Ok<T, E>(v))
-        .catch((e: unknown) =>
-          Err<T, E>(onError(e instanceof Error ? e : new Error(String(e)))),
-        );
-    }
-
-    return Ok(value);
-  } catch (e) {
-    return Err(onError(e instanceof Error ? e : new Error(String(e))));
-  }
 }

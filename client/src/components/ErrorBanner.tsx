@@ -1,0 +1,50 @@
+import { useTranslation } from "react-i18next";
+import type { ApiRequestError } from "../api/client.js";
+
+interface ErrorBannerProps {
+  error: Error;
+  onRetry?: () => void;
+}
+
+export function ErrorBanner({ error, onRetry }: ErrorBannerProps) {
+  const { t } = useTranslation();
+
+  const message =
+    "code" in error
+      ? getErrorMessage(error as ApiRequestError, t)
+      : t("errors.generic");
+
+  return (
+    <div className="rounded-md bg-red-50 p-4">
+      <div className="flex items-start">
+        <div className="flex-1">
+          <p className="text-sm text-red-700">{message}</p>
+        </div>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="ml-4 rounded-md bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-200"
+          >
+            {t("errors.retry")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getErrorMessage(
+  error: ApiRequestError,
+  t: (key: string) => string,
+): string {
+  switch (error.code) {
+    case "LLM_TIMEOUT":
+      return t("errors.timeout");
+    case "RATE_LIMITED":
+      return t("errors.rateLimited");
+    case "VALIDATION_ERROR":
+      return t("errors.validation");
+    default:
+      return error.message;
+  }
+}

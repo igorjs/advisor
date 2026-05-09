@@ -29,9 +29,7 @@ export function RecordCard({
   const [editTitle, setEditTitle] = useState(record.title);
   const [editDescription, setEditDescription] = useState(record.description);
   const cardRef = useRef<HTMLDivElement>(null);
-
-  // Scroll focused card into view
-  // Legitimate useEffect: synchronising with DOM scroll position (external system)
+  // Scroll focused card into view (legitimate useEffect: DOM scroll position)
   useEffect(() => {
     if (focused && cardRef.current) {
       cardRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -48,7 +46,29 @@ export function RecordCard({
   useHotkey({
     key: "d",
     onPress: handleDelete,
-    enabled: focused && !isEditing && !disabled,
+    enabled: focused && !isEditing && !isConfirmingDelete && !disabled,
+  });
+
+  // During confirm: Y confirms, N/Enter/Escape cancels (N is the safe default)
+  useHotkey({
+    key: "y",
+    onPress: () => { onDelete(); setIsConfirmingDelete(false); },
+    enabled: isConfirmingDelete,
+  });
+  useHotkey({
+    key: "n",
+    onPress: cancelDelete,
+    enabled: isConfirmingDelete,
+  });
+  useHotkey({
+    key: "Enter",
+    onPress: cancelDelete,
+    enabled: isConfirmingDelete,
+  });
+  useHotkey({
+    key: "Escape",
+    onPress: cancelDelete,
+    enabled: isConfirmingDelete,
   });
 
   function handleSave() {
@@ -69,13 +89,16 @@ export function RecordCard({
     setIsEditing(false);
   }
 
+  function cancelDelete() {
+    setIsConfirmingDelete(false);
+  }
+
   function handleDelete() {
     if (isConfirmingDelete) {
       onDelete();
       setIsConfirmingDelete(false);
     } else {
       setIsConfirmingDelete(true);
-      setTimeout(() => setIsConfirmingDelete(false), 3000);
     }
   }
 
@@ -143,7 +166,7 @@ export function RecordCard({
             <h3 className="text-sm font-semibold text-gray-900">
               {record.title}
             </h3>
-            <div className="ml-4 flex shrink-0 gap-1">
+            <div className="ml-4 flex min-w-[140px] shrink-0 justify-end gap-1">
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={disabled}
@@ -161,10 +184,18 @@ export function RecordCard({
                     : "text-gray-500 hover:bg-red-50 hover:text-red-600"
                 }`}
               >
-                {isConfirmingDelete
-                  ? t("records.confirmDelete")
-                  : t("records.delete")}
-                {focused && !isConfirmingDelete && <Kbd>D</Kbd>}
+                {isConfirmingDelete ? (
+                  <>
+                    {t("records.confirmDelete")}
+                    <Kbd>Y</Kbd>
+                    <Kbd>N</Kbd>
+                  </>
+                ) : (
+                  <>
+                    {t("records.delete")}
+                    {focused && <Kbd>D</Kbd>}
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -19,7 +19,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
-    "confirmDelete": "Are you sure?",
+    "confirmDelete": "Delete?",
     "editTitle": "Edit title",
     "editDescription": "Edit description"
   },

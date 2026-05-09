@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import { z } from "zod";
 import { LLM_TIMEOUT_MS } from "../config/llm.js";
-import { SYSTEM_PROMPT } from "../config/prompts.js";
+import { buildSystemPrompt } from "../config/prompts.js";
 import { Err, Ok, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 
@@ -50,7 +50,7 @@ export function createLlmService(config: LlmServiceConfig): LlmService {
         const completion = await client.chat.completions.create({
           model: config.model,
           messages: [
-            { role: "system", content: SYSTEM_PROMPT },
+            { role: "system", content: buildSystemPrompt() },
             { role: "user", content: prompt },
           ],
           // json_object mode works across all OpenAI-compatible providers.

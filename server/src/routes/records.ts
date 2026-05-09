@@ -12,22 +12,11 @@ const updateRecordSchema = z
     message: "At least one field (title or description) must be provided.",
   });
 
+// No GET endpoint: records are embedded in the prompt response
+// (GET /prompts/:id already returns { data: { ...prompt, records: [...] } }).
+// Only mutation endpoints live here.
 export function createRecordRoutes(recordService: RecordService) {
   const recordRoutes = new Hono();
-
-  // Returns paginated shape directly (not via matchResult) to avoid
-  // double-wrapping: client expects { data: [...], meta: {...} }
-  recordRoutes.get("/", async (c) => {
-    const promptId = c.req.param("promptId") ?? "";
-    const result = await recordService.getRecords(promptId);
-
-    if (!result.ok) return jsonError(c, result.error);
-
-    return c.json({
-      data: result.value,
-      meta: { total: result.value.length, page: 1, pageSize: result.value.length },
-    });
-  });
 
   recordRoutes.patch("/:recordId", async (c) => {
     const body = await c.req.json().catch(() => null);

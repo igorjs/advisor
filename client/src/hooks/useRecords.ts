@@ -1,19 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { deleteRecord, getRecords, updateRecord } from "../api/records.js";
-import type { PaginatedResponse, RecordResponse } from "../types/api.js";
+import { deleteRecord, updateRecord } from "../api/records.js";
+import type { DataResponse, PromptResponse } from "../types/api.js";
 
-export function useRecords(promptPublicId: string) {
-  return useQuery({
-    queryKey: ["records", promptPublicId],
-    queryFn: () => getRecords(promptPublicId),
-  });
-}
+// No useRecords query hook: records come from the prompt query
+// (GET /prompts/:id returns records embedded). Mutations here
+// optimistically update the prompt cache and invalidate on settle.
 
 export function useUpdateRecord(promptPublicId: string) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const queryKey = ["prompts", promptPublicId];
 
   return useMutation({
     mutationFn: ({
@@ -24,29 +22,23 @@ export function useUpdateRecord(promptPublicId: string) {
       data: { title?: string; description?: string };
     }) => updateRecord(promptPublicId, recordPublicId, data),
 
-    // Optimistic update
+    // Optimistic update on the prompt cache
     onMutate: async ({ recordPublicId, data }) => {
-      await queryClient.cancelQueries({
-        queryKey: ["records", promptPublicId],
-      });
+      await queryClient.cancelQueries({ queryKey });
 
-      const previous = queryClient.getQueryData<PaginatedResponse<RecordResponse>>([
-        "records",
-        promptPublicId,
-      ]);
+      const previous = queryClient.getQueryData<DataResponse<PromptResponse>>(queryKey);
 
       if (previous) {
-        queryClient.setQueryData<PaginatedResponse<RecordResponse>>(
-          ["records", promptPublicId],
-          {
-            ...previous,
-            data: previous.data.map((record) =>
+        queryClient.setQueryData<DataResponse<PromptResponse>>(queryKey, {
+          data: {
+            ...previous.data,
+            records: previous.data.records.map((record) =>
               record.publicId === recordPublicId
                 ? { ...record, ...data }
                 : record,
             ),
           },
-        );
+        });
       }
 
       return { previous };
@@ -54,18 +46,13 @@ export function useUpdateRecord(promptPublicId: string) {
 
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          ["records", promptPublicId],
-          context.previous,
-        );
+        queryClient.setQueryData(queryKey, context.previous);
       }
       toast.error(t("errors.generic"));
     },
 
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["records", promptPublicId],
-      });
+      queryClient.invalidateQueries({ queryKey });
     },
 
     onSuccess: () => {
@@ -77,33 +64,27 @@ export function useUpdateRecord(promptPublicId: string) {
 export function useDeleteRecord(promptPublicId: string) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const queryKey = ["prompts", promptPublicId];
 
   return useMutation({
     mutationFn: (recordPublicId: string) =>
       deleteRecord(promptPublicId, recordPublicId),
 
-    // Optimistic delete
+    // Optimistic delete on the prompt cache
     onMutate: async (recordPublicId) => {
-      await queryClient.cancelQueries({
-        queryKey: ["records", promptPublicId],
-      });
+      await queryClient.cancelQueries({ queryKey });
 
-      const previous = queryClient.getQueryData<PaginatedResponse<RecordResponse>>([
-        "records",
-        promptPublicId,
-      ]);
+      const previous = queryClient.getQueryData<DataResponse<PromptResponse>>(queryKey);
 
       if (previous) {
-        const filtered = previous.data.filter(
-          (r) => r.publicId !== recordPublicId,
-        );
-        queryClient.setQueryData<PaginatedResponse<RecordResponse>>(
-          ["records", promptPublicId],
-          {
-            data: filtered,
-            meta: { ...previous.meta, total: filtered.length },
+        queryClient.setQueryData<DataResponse<PromptResponse>>(queryKey, {
+          data: {
+            ...previous.data,
+            records: previous.data.records.filter(
+              (r) => r.publicId !== recordPublicId,
+            ),
           },
-        );
+        });
       }
 
       return { previous };
@@ -111,18 +92,13 @@ export function useDeleteRecord(promptPublicId: string) {
 
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData(
-          ["records", promptPublicId],
-          context.previous,
-        );
+        queryClient.setQueryData(queryKey, context.previous);
       }
       toast.error(t("errors.generic"));
     },
 
     onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["records", promptPublicId],
-      });
+      queryClient.invalidateQueries({ queryKey });
     },
 
     onSuccess: () => {

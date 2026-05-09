@@ -14,15 +14,6 @@ export interface PromptResponse {
   records: RecordResponse[];
 }
 
-export interface PaginatedResponse<T> {
-  data: T[];
-  meta: {
-    total: number;
-    page: number;
-    pageSize: number;
-  };
-}
-
 export interface DataResponse<T> {
   data: T;
 }

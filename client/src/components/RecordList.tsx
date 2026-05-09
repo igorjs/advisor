@@ -1,27 +1,18 @@
-import { useDeleteRecord, useRecords, useUpdateRecord } from "../hooks/useRecords.js";
+import { useDeleteRecord, useUpdateRecord } from "../hooks/useRecords.js";
+import type { RecordResponse } from "../types/api.js";
 import { EmptyState } from "./EmptyState.js";
-import { ErrorBanner } from "./ErrorBanner.js";
 import { RecordCard } from "./RecordCard.js";
-import { RecordSkeleton } from "./RecordSkeleton.js";
 
 interface RecordListProps {
   promptPublicId: string;
+  records: RecordResponse[];
 }
 
-export function RecordList({ promptPublicId }: RecordListProps) {
-  const { data, isLoading, error, refetch } = useRecords(promptPublicId);
+// Records come from the prompt query (single source of truth).
+// Mutations optimistically update the prompt cache directly.
+export function RecordList({ promptPublicId, records }: RecordListProps) {
   const updateMutation = useUpdateRecord(promptPublicId);
   const deleteMutation = useDeleteRecord(promptPublicId);
-
-  if (isLoading) {
-    return <RecordSkeleton />;
-  }
-
-  if (error) {
-    return <ErrorBanner error={error} onRetry={() => refetch()} />;
-  }
-
-  const records = data?.data ?? [];
 
   if (records.length === 0) {
     return <EmptyState />;

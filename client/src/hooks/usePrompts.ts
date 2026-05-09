@@ -19,7 +19,6 @@ export function useCreatePrompt() {
     mutationFn: (text: string) => createPrompt(text),
     onSuccess: (data) => {
       queryClient.setQueryData(["prompts", data.data.publicId], data);
-      queryClient.invalidateQueries({ queryKey: ["records"] });
       toast.success(t("toast.promptCreated"));
     },
     onError: () => {
@@ -37,9 +36,6 @@ export function useReQueryPrompt() {
       reQueryPrompt(publicId, text),
     onSuccess: (data) => {
       queryClient.setQueryData(["prompts", data.data.publicId], data);
-      queryClient.invalidateQueries({
-        queryKey: ["records", data.data.publicId],
-      });
       toast.success(t("toast.promptRequeried"));
     },
     onError: () => {

@@ -1,15 +1,8 @@
 import { api } from "./client.js";
-import type {
-  DataResponse,
-  PaginatedResponse,
-  RecordResponse,
-} from "../types/api.js";
+import type { DataResponse, RecordResponse } from "../types/api.js";
 
-export function getRecords(promptPublicId: string) {
-  return api.get<PaginatedResponse<RecordResponse>>(
-    `/api/v1/prompts/${promptPublicId}/records`,
-  );
-}
+// No getRecords: records come embedded in the prompt response.
+// Only mutation endpoints are called directly.
 
 export function updateRecord(
   promptPublicId: string,

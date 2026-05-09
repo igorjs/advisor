@@ -14,11 +14,6 @@ interface PromptData {
   };
 }
 
-interface RecordsData {
-  data: Array<{ publicId: string; title: string; description: string }>;
-  meta: { total: number; page: number; pageSize: number };
-}
-
 interface RecordData {
   data: { publicId: string; title: string; description: string };
 }
@@ -181,23 +176,6 @@ describe("API Integration", () => {
     });
   });
 
-  describe("GET /api/v1/prompts/:promptId/records", () => {
-    it("returns records with pagination meta", async () => {
-      // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
-
-      // Act
-      const res = await app.request(`/api/v1/prompts/${created.data.publicId}/records`);
-
-      // Assert
-      expect(res.status).toBe(200);
-      const body = await jsonBody<RecordsData>(res);
-      expect(body.data).toHaveLength(2);
-      expect(body.meta.total).toBe(2);
-    });
-  });
-
   describe("PATCH /api/v1/prompts/:promptId/records/:recordId", () => {
     it("updates a record's title", async () => {
       // Arrange
@@ -253,10 +231,10 @@ describe("API Integration", () => {
       // Assert
       expect(res.status).toBe(204);
 
-      // Verify record is gone from list
-      const listRes = await app.request(`/api/v1/prompts/${promptId}/records`);
-      const listBody = await jsonBody<RecordsData>(listRes);
-      expect(listBody.data).toHaveLength(1);
+      // Verify record is gone via prompt endpoint
+      const getRes = await app.request(`/api/v1/prompts/${promptId}`);
+      const getBody = await jsonBody<PromptData>(getRes);
+      expect(getBody.data.records).toHaveLength(1);
     });
 
     it("returns 404 for unknown record", async () => {

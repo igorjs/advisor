@@ -25,6 +25,12 @@ export function createPromptRoutes(promptService: PromptService) {
     return matchResult(c, result);
   });
 
+  // PATCH is a pragmatic choice here, not a perfect one. This operation
+  // does more than update a field: it triggers an LLM call and replaces
+  // all child records. Semantically it's closer to POST .../requery
+  // (a command, not a partial update).
+  // TODO: refactor to POST /prompts/:publicId/requery when adding
+  // a genuine PATCH for metadata-only updates (rename, tags, etc.)
   prompts.patch("/:publicId", async (c) => {
     const body = await c.req.json().catch(() => null);
     const parsed = promptTextSchema.safeParse(body);

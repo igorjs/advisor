@@ -32,3 +32,5 @@ Thumbs.db
 # Internal
 .local/
 .claude/
+.playwright-mcp/
+screenshots/

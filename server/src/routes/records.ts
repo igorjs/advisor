@@ -15,17 +15,18 @@ const updateRecordSchema = z
 export function createRecordRoutes(recordService: RecordService) {
   const recordRoutes = new Hono();
 
+  // Returns paginated shape directly (not via matchResult) to avoid
+  // double-wrapping: client expects { data: [...], meta: {...} }
   recordRoutes.get("/", async (c) => {
     const promptId = c.req.param("promptId") ?? "";
     const result = await recordService.getRecords(promptId);
 
-    return matchResult(
-      c,
-      result.map((recs) => ({
-        records: recs,
-        meta: { total: recs.length, page: 1, pageSize: recs.length },
-      })),
-    );
+    if (!result.ok) return jsonError(c, result.error);
+
+    return c.json({
+      data: result.value,
+      meta: { total: result.value.length, page: 1, pageSize: result.value.length },
+    });
   });
 
   recordRoutes.patch("/:recordId", async (c) => {

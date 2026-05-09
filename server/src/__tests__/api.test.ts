@@ -15,10 +15,8 @@ interface PromptData {
 }
 
 interface RecordsData {
-  data: {
-    records: Array<{ publicId: string; title: string; description: string }>;
-    meta: { total: number; page: number; pageSize: number };
-  };
+  data: Array<{ publicId: string; title: string; description: string }>;
+  meta: { total: number; page: number; pageSize: number };
 }
 
 interface RecordData {
@@ -195,8 +193,8 @@ describe("API Integration", () => {
       // Assert
       expect(res.status).toBe(200);
       const body = await jsonBody<RecordsData>(res);
-      expect(body.data.records).toHaveLength(2);
-      expect(body.data.meta.total).toBe(2);
+      expect(body.data).toHaveLength(2);
+      expect(body.meta.total).toBe(2);
     });
   });
 
@@ -258,7 +256,7 @@ describe("API Integration", () => {
       // Verify record is gone from list
       const listRes = await app.request(`/api/v1/prompts/${promptId}/records`);
       const listBody = await jsonBody<RecordsData>(listRes);
-      expect(listBody.data.records).toHaveLength(1);
+      expect(listBody.data).toHaveLength(1);
     });
 
     it("returns 404 for unknown record", async () => {

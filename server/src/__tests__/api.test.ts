@@ -4,6 +4,7 @@ import { createApp } from "../app.js";
 import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
 import { Err, Ok } from "../lib/result.js";
 import type { LlmService } from "../services/llm.service.js";
+import type { SearchService } from "../services/search.service.js";
 import { jsonBody, patchJson, postJson } from "./helpers.js";
 
 interface PromptData {
@@ -35,6 +36,19 @@ function createMockLlm(overrides?: Partial<LlmService>): LlmService {
   };
 }
 
+const TEST_LLM_CONFIG = { apiKey: "test", baseUrl: "http://localhost", model: "test" };
+const mockSearch: SearchService = { search: () => Promise.resolve(Ok([])) };
+
+function buildApp(db: DatabaseConnection["db"], llm?: LlmService) {
+  return createApp({
+    db,
+    llmConfig: TEST_LLM_CONFIG,
+    search: mockSearch,
+    llm: llm ?? createMockLlm(),
+    clientOrigin: "http://localhost:5173",
+  });
+}
+
 describe("API Integration", () => {
   let conn: DatabaseConnection;
   let app: ReturnType<typeof createApp>;
@@ -42,11 +56,7 @@ describe("API Integration", () => {
   beforeEach(async () => {
     conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
     await migrate(conn.db, { migrationsFolder: "./drizzle" });
-    app = createApp({
-      db: conn.db,
-      llm: createMockLlm(),
-      clientOrigin: "http://localhost:5173",
-    });
+    app = buildApp(conn.db);
   });
 
   afterEach(() => {
@@ -99,14 +109,13 @@ describe("API Integration", () => {
 
     it("returns LLM error status when LLM fails", async () => {
       // Arrange
-      const failApp = createApp({
-        db: conn.db,
-        llm: createMockLlm({
+      const failApp = buildApp(
+        conn.db,
+        createMockLlm({
           generateRecords: () =>
             Promise.resolve(Err({ code: "LLM_TIMEOUT", message: "Timed out" })),
         }),
-        clientOrigin: "http://localhost:5173",
-      });
+      );
 
       // Act
       const res = await failApp.request("/api/v1/prompts", postJson({ text: "test" }));
@@ -151,14 +160,13 @@ describe("API Integration", () => {
       const createRes = await app.request("/api/v1/prompts", postJson({ text: "original" }));
       const created = await jsonBody<PromptData>(createRes);
 
-      const reQueryApp = createApp({
-        db: conn.db,
-        llm: createMockLlm({
+      const reQueryApp = buildApp(
+        conn.db,
+        createMockLlm({
           generateRecords: () =>
             Promise.resolve(Ok([{ title: "New Tip", description: "New desc" }])),
         }),
-        clientOrigin: "http://localhost:5173",
-      });
+      );
 
       // Act
       const res = await reQueryApp.request(

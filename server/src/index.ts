@@ -6,7 +6,7 @@ import { createApp } from "./app.js";
 import { closeDatabase, createDatabase } from "./db/index.js";
 import { env } from "./env.js";
 import { logger } from "./middleware/logger.js";
-import { createLlmService } from "./services/llm.service.js";
+import { createSearchService } from "./services/search.service.js";
 
 // Ensure database directory exists for file-based databases
 if (env.DATABASE_URL.startsWith("file:")) {
@@ -29,16 +29,19 @@ logger.info(
 );
 
 // Initialize services
-const llm = createLlmService({
+const llmConfig = {
   apiKey: env.LLM_API_KEY,
   baseUrl: env.LLM_BASE_URL,
   model: env.LLM_MODEL,
-});
+};
+
+const search = createSearchService(env.JINA_API_KEY);
 
 // Create app
-const app = createApp({
+const app = await createApp({
   db: conn.db,
-  llm,
+  llmConfig,
+  search,
   clientOrigin: env.CLIENT_ORIGIN,
 });
 

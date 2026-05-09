@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import type { ChatMessage as ChatMessageType } from "../types/api.js";
@@ -24,10 +27,22 @@ export function ChatThread({ messages, isStreaming, onEditMessage }: ChatThreadP
     queueMicrotask(scrollToBottom);
   }
 
+  // Empty state: centred welcome when no messages yet
+  if (messages.length === 0 && !isStreaming) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-center">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+          {t("app.title")}
+        </h2>
+        <p className="mt-2 max-w-md text-sm text-gray-500">
+          {t("chat.greeting")}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <ChatMessage message={{ role: "assistant", content: t("chat.greeting") }} />
-
       {messages.map((msg, i) => (
         <ChatMessage
           key={i}

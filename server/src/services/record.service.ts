@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, records } from "../db/schema.js";
@@ -80,7 +83,11 @@ export function createRecordService(db: AppDatabase): RecordService {
         .returning()
         .get();
 
-      return Ok(toRecordResponse(updated!));
+      if (!updated) {
+        return Err({ code: "INTERNAL_ERROR", message: "Failed to reload record after update." });
+      }
+
+      return Ok(toRecordResponse(updated));
     },
 
     async deleteRecord(conversationPublicId, recordPublicId) {

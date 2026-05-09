@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 export interface RecordResponse {
   publicId: string;
   title: string;
@@ -6,12 +9,19 @@ export interface RecordResponse {
   updatedAt: string;
 }
 
+export interface MessageResponse {
+  publicId: string;
+  role: string;
+  content: string;
+}
+
 export interface ConversationResponse {
   publicId: string;
   title: string;
   createdAt: string;
   updatedAt: string;
   records: RecordResponse[];
+  messages: MessageResponse[];
 }
 
 export interface ChatMessage {

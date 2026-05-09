@@ -1,13 +1,17 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, messages, records } from "../db/schema.js";
-import { toConversationResponse, type ConversationResponse } from "../dto/conversation.dto.js";
+import { toConversationResponse, toVisibleMessages, type ConversationResponse, type MessageResponse } from "../dto/conversation.dto.js";
 import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
 import { Err, fromNullable, Ok, type Option, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 
 export interface ConversationWithRecords extends ConversationResponse {
   records: RecordResponse[];
+  messages: MessageResponse[];
 }
 
 export interface ConversationService {
@@ -41,12 +45,21 @@ export function createConversationService(
       .where(and(eq(records.conversationId, conversationId), isNull(records.deletedAt)))
       .all();
 
+  const getMessagesForConversation = async (conversationId: number) =>
+    db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .all();
+
   const buildResponse = (
     conversationRow: typeof conversations.$inferSelect,
     recordRows: Array<typeof records.$inferSelect>,
+    messageRows: Array<typeof messages.$inferSelect>,
   ): ConversationWithRecords => ({
     ...toConversationResponse(conversationRow),
     records: recordRows.map(toRecordResponse),
+    messages: toVisibleMessages(messageRows),
   });
 
   return {
@@ -60,7 +73,11 @@ export function createConversationService(
         .returning()
         .get();
 
-      return Ok(buildResponse(conversation!, []));
+      if (!conversation) {
+        return Err({ code: "INTERNAL_ERROR", message: "Failed to create conversation." });
+      }
+
+      return Ok(buildResponse(conversation, [], []));
     },
 
     async getConversation(publicId) {
@@ -73,7 +90,8 @@ export function createConversationService(
       if (!conversationResult.ok) return Err(conversationResult.error);
 
       const conversationRecords = await getRecordsForConversation(conversationResult.value.id);
-      return Ok(buildResponse(conversationResult.value, conversationRecords));
+      const conversationMessages = await getMessagesForConversation(conversationResult.value.id);
+      return Ok(buildResponse(conversationResult.value, conversationRecords, conversationMessages));
     },
 
     async reQueryConversation(publicId, title) {
@@ -105,7 +123,11 @@ export function createConversationService(
         .where(eq(conversations.id, conversation.id))
         .get();
 
-      return Ok(buildResponse(updated!, []));
+      if (!updated) {
+        return Err({ code: "INTERNAL_ERROR", message: "Failed to reload conversation after update." });
+      }
+
+      return Ok(buildResponse(updated, [], []));
     },
 
     async findConversation(publicId) {

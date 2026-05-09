@@ -1,13 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { useCallback, useEffect, useState } from "react";
 
-// URL pattern: /p/:publicId for a conversation, / for new
+// URL pattern: /chat/:publicId for a conversation, / for new
 function readFromUrl(): string | null {
-  const match = window.location.pathname.match(/^\/p\/(.+)$/);
+  const match = window.location.pathname.match(/^\/chat\/(.+)$/);
   return match?.[1] ?? null;
 }
 
 function writeToUrl(id: string | null): void {
-  const path = id ? `/p/${id}` : "/";
+  const path = id ? `/chat/${id}` : "/";
   if (window.location.pathname !== path) {
     window.history.pushState(null, "", path);
   }
@@ -17,7 +20,7 @@ function writeToUrl(id: string | null): void {
  * Stores the active conversation ID in the URL path so results are bookmarkable.
  * Handles browser back/forward via popstate listener.
  *
- * We only have two routes (/ and /p/:id), so a full router (TanStack Router,
+ * We only have two routes (/ and /chat/:id), so a full router (TanStack Router,
  * React Router) would add ~12KB and config overhead for no real benefit.
  * This hook covers pushState, popstate, and URL parsing in 35 lines.
  * Swap to a proper router when a third route appears.

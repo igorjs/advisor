@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import OpenAI from "openai";
 import { z } from "zod";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
@@ -279,7 +282,7 @@ export function createAgentService(
               })
               .returning()
               .get();
-            insertedRecords.push(toRecordResponse(row!));
+            if (row) insertedRecords.push(toRecordResponse(row));
           }
 
           // Mark conversation as updated
@@ -519,7 +522,7 @@ export function createAgentService(
               })
               .returning()
               .get();
-            insertedRecords.push(toRecordResponse(row!));
+            if (row) insertedRecords.push(toRecordResponse(row));
           }
 
           await db

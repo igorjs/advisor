@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -10,6 +13,8 @@ interface UseChatStreamResult {
   toolStatus: string | null;
   sendMessage: (conversationPublicId: string, message: string) => void;
   editMessage: (conversationPublicId: string, messageIndex: number, newContent: string) => void;
+  reset: () => void;
+  hydrate: (serverMessages: Array<{ role: string; content: string }>) => void;
 }
 
 /**
@@ -170,5 +175,30 @@ export function useChatStream(): UseChatStreamResult {
     [sendMessage],
   );
 
-  return { messages, isStreaming, toolStatus, sendMessage, editMessage };
+  // Clear all local state for a fresh conversation
+  const reset = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setMessages([]);
+    setIsStreaming(false);
+    setToolStatus(null);
+  }, []);
+
+  // Load persisted messages from the server (e.g. after page refresh).
+  // Only hydrates when local state is empty to avoid overwriting an
+  // active streaming session.
+  const hydrate = useCallback((serverMessages: Array<{ role: string; content: string }>) => {
+    setMessages((prev) => {
+      if (prev.length > 0) return prev;
+      return serverMessages.map((m) => {
+        const role: ChatMessage["role"] =
+          m.role === "user" || m.role === "assistant" || m.role === "tool"
+            ? m.role
+            : "assistant";
+        return { role, content: m.content };
+      });
+    });
+  }, []);
+
+  return { messages, isStreaming, toolStatus, sendMessage, editMessage, reset, hydrate };
 }

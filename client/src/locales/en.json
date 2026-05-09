@@ -1,7 +1,7 @@
 {
   "app": {
-    "title": "Advisor",
-    "subtitle": "Get expert advice powered by AI"
+    "title": "Financial Advisor",
+    "subtitle": "Get tax and finance expert advice powered by AI"
   },
   "prompt": {
     "placeholder": "Enter your question for the advisor...",

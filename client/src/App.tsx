@@ -93,11 +93,18 @@ export function App() {
         {/* Records appear when the conversation completes */}
         <Activity mode={hasRecords ? "visible" : "hidden"}>
           {activePromptId && (
-            <RecordList
-              promptPublicId={activePromptId}
-              records={records}
-              disabled={isSubmitting || chat.isStreaming}
-            />
+            <>
+              <div className="flex items-center gap-3 text-xs text-gray-400">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span>{records.length} strategies</span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+              <RecordList
+                promptPublicId={activePromptId}
+                records={records}
+                disabled={isSubmitting || chat.isStreaming}
+              />
+            </>
           )}
         </Activity>
 

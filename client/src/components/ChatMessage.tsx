@@ -9,7 +9,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
     case "user":
       return (
         <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-lg bg-primary-600 px-4 py-2.5 text-sm text-white">
+          <div className="max-w-[75%] rounded-2xl rounded-br-sm bg-primary-600 px-4 py-3 text-sm leading-relaxed text-white shadow-sm">
             {message.content}
           </div>
         </div>
@@ -17,8 +17,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
     case "assistant":
       return (
-        <div className="flex justify-start">
-          <div className="max-w-[80%] rounded-lg bg-gray-100 px-4 py-2.5 text-sm text-gray-900">
+        <div className="flex items-start gap-2.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+            AI
+          </div>
+          <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm leading-relaxed text-gray-800 shadow-sm ring-1 ring-gray-100">
             {message.content}
           </div>
         </div>
@@ -26,10 +29,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
     case "tool":
       return (
-        <div className="flex justify-start">
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-500">
+        <div className="flex items-start gap-2.5 pl-9">
+          <div className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] text-gray-400">
             <svg
-              className="h-3.5 w-3.5 shrink-0"
+              className="h-3 w-3 shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

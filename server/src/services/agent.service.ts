@@ -238,18 +238,11 @@ export function createAgentService(
         // No tool calls: LLM returned a text response
         const content = assistantMessage.content ?? "";
 
-        // Try to parse as structured records
-        const stripped = content
-          .replace(/^```(?:json)?\s*\n?/i, "")
-          .replace(/\n?```\s*$/i, "")
-          .trim();
-
-        let parsed: z.infer<typeof recordsSchema> | null = null;
-        try {
-          parsed = recordsSchema.parse(JSON.parse(stripped));
-        } catch {
-          // Not JSON records: it's a follow-up question or clarification
-        }
+        // Try to extract structured records from the response.
+        // Models don't always return pure JSON: they may include preamble
+        // text or wrap in code fences. We find the first { and last } to
+        // extract the JSON object regardless of surrounding text.
+        const parsed = extractRecords(content);
 
         if (parsed) {
           // Save assistant message
@@ -313,3 +306,34 @@ export function createAgentService(
   };
 }
 
+/**
+ * Extract JSON records from LLM output that may contain preamble text,
+ * code fences, or other wrapping. Finds the outermost { } and parses.
+ */
+function extractRecords(
+  content: string,
+): z.infer<typeof recordsSchema> | null {
+  // Strip code fences first
+  const stripped = content
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/i, "")
+    .trim();
+
+  // Try parsing the whole string first (fast path)
+  try {
+    return recordsSchema.parse(JSON.parse(stripped));
+  } catch {
+    // Fall through to extraction
+  }
+
+  // Find the first { and last } to extract JSON from preamble/postamble
+  const start = stripped.indexOf("{");
+  const end = stripped.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  try {
+    return recordsSchema.parse(JSON.parse(stripped.slice(start, end + 1)));
+  } catch {
+    return null;
+  }
+}

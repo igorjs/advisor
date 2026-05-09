@@ -12,8 +12,8 @@ const updateRecordSchema = z
     message: "At least one field (title or description) must be provided.",
   });
 
-// No GET endpoint: records are embedded in the prompt response
-// (GET /prompts/:id already returns { data: { ...prompt, records: [...] } }).
+// No GET endpoint: records are embedded in the conversation response
+// (GET /conversations/:id already returns { data: { ...conversation, records: [...] } }).
 // Only mutation endpoints live here.
 export function createRecordRoutes(recordService: RecordService) {
   const recordRoutes = new Hono();
@@ -25,7 +25,7 @@ export function createRecordRoutes(recordService: RecordService) {
     if (!parsed.success) return validationError(c, parsed.error.issues);
 
     const result = await recordService.updateRecord(
-      c.req.param("promptId") ?? "",
+      c.req.param("conversationId") ?? "",
       c.req.param("recordId"),
       parsed.data,
     );
@@ -34,7 +34,7 @@ export function createRecordRoutes(recordService: RecordService) {
 
   recordRoutes.delete("/:recordId", async (c) => {
     const result = await recordService.deleteRecord(
-      c.req.param("promptId") ?? "",
+      c.req.param("conversationId") ?? "",
       c.req.param("recordId"),
     );
 

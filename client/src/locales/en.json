@@ -25,7 +25,7 @@
   },
   "chat": {
     "greeting": "Hi! I'm your financial advisor. Tell me about your client's situation and I'll research the best tax strategies for them.",
-    "placeholder": "Reply to the advisor...",
+    "placeholder": "Ask me anything about tax and finance...",
     "send": "Send"
   },
   "errors": {

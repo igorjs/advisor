@@ -7,40 +7,39 @@ import { PromptForm } from "./components/PromptForm.js";
 import { RecordList } from "./components/RecordList.js";
 import { RecordSkeleton } from "./components/RecordSkeleton.js";
 import { useChatStream } from "./hooks/useChatStream.js";
-import { usePromptId } from "./hooks/usePromptId.js";
-import { useCreatePrompt, usePrompt, useReQueryPrompt } from "./hooks/usePrompts.js";
+import { useConversationId } from "./hooks/useConversationId.js";
+import { useConversation, useCreateConversation, useReQueryConversation } from "./hooks/useConversations.js";
 
 export function App() {
   const { t } = useTranslation();
-  const [activePromptId, setActivePromptId] = usePromptId();
+  const [activeConversationId, setActiveConversationId] = useConversationId();
 
-  const { data, isLoading, error, refetch } = usePrompt(activePromptId);
-  const createMutation = useCreatePrompt();
-  const reQueryMutation = useReQueryPrompt();
+  const { data, isLoading, error, refetch } = useConversation(activeConversationId);
+  const createMutation = useCreateConversation();
+  const reQueryMutation = useReQueryConversation();
   const chat = useChatStream();
 
   // Derived
   const isSubmitting = createMutation.isPending || reQueryMutation.isPending;
   const records = data?.data.records ?? [];
-  const promptText = data?.data.text ?? null;
-  const promptStatus = data?.data.status ?? null;
-  const hasRecords = activePromptId !== null && !isLoading && !error && records.length > 0;
-  const isChatting = activePromptId !== null && promptStatus === "chatting";
+  const conversationTitle = data?.data.title ?? null;
+  const hasRecords = activeConversationId !== null && !isLoading && !error && records.length > 0;
+  const isChatting = activeConversationId !== null && !hasRecords;
 
   function handleSubmit(text: string) {
-    if (activePromptId) {
+    if (activeConversationId) {
       if (isChatting) {
-        chat.sendMessage(activePromptId, text);
+        chat.sendMessage(activeConversationId, text);
         return;
       }
       reQueryMutation.mutate(
-        { publicId: activePromptId, text },
-        { onSuccess: (res) => setActivePromptId(res.data.publicId) },
+        { publicId: activeConversationId, text },
+        { onSuccess: (res) => setActiveConversationId(res.data.publicId) },
       );
     } else {
       createMutation.mutate(text, {
         onSuccess: (res) => {
-          setActivePromptId(res.data.publicId);
+          setActiveConversationId(res.data.publicId);
           chat.sendMessage(res.data.publicId, text);
         },
       });
@@ -48,7 +47,7 @@ export function App() {
   }
 
   // Landing: centred prompt form, no conversation yet
-  if (!activePromptId) {
+  if (!activeConversationId) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-4">
         <header className="mb-8 text-center">
@@ -61,7 +60,7 @@ export function App() {
           <PromptForm
             isReQuery={false}
             isSubmitting={isSubmitting}
-            promptText={null}
+            conversationTitle={null}
             onSubmit={handleSubmit}
           />
         </div>
@@ -107,14 +106,14 @@ export function App() {
           <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
             {isChatting ? (
               <ChatInput
-                onSend={(msg) => chat.sendMessage(activePromptId, msg)}
+                onSend={(msg) => chat.sendMessage(activeConversationId, msg)}
                 disabled={chat.isStreaming}
               />
-            ) : promptStatus === "complete" ? (
+            ) : hasRecords ? (
               <PromptForm
                 isReQuery={true}
                 isSubmitting={isSubmitting}
-                promptText={promptText}
+                conversationTitle={conversationTitle}
                 onSubmit={handleSubmit}
               />
             ) : null}
@@ -130,7 +129,7 @@ export function App() {
               <div className="h-px flex-1 bg-gray-200" />
             </div>
             <RecordList
-              promptPublicId={activePromptId}
+              conversationPublicId={activeConversationId}
               records={records}
               disabled={isSubmitting || chat.isStreaming}
             />

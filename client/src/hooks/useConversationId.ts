@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-// URL pattern: /p/:publicId for a prompt, / for new
+// URL pattern: /p/:publicId for a conversation, / for new
 function readFromUrl(): string | null {
   const match = window.location.pathname.match(/^\/p\/(.+)$/);
   return match?.[1] ?? null;
@@ -14,7 +14,7 @@ function writeToUrl(id: string | null): void {
 }
 
 /**
- * Stores the active prompt ID in the URL path so results are bookmarkable.
+ * Stores the active conversation ID in the URL path so results are bookmarkable.
  * Handles browser back/forward via popstate listener.
  *
  * We only have two routes (/ and /p/:id), so a full router (TanStack Router,
@@ -22,20 +22,20 @@ function writeToUrl(id: string | null): void {
  * This hook covers pushState, popstate, and URL parsing in 35 lines.
  * Swap to a proper router when a third route appears.
  */
-export function usePromptId() {
-  const [promptId, setPromptIdState] = useState(readFromUrl);
+export function useConversationId() {
+  const [conversationId, setConversationIdState] = useState(readFromUrl);
 
-  const setPromptId = useCallback((id: string | null) => {
-    setPromptIdState(id);
+  const setConversationId = useCallback((id: string | null) => {
+    setConversationIdState(id);
     writeToUrl(id);
   }, []);
 
   // Sync state when user navigates with back/forward buttons
   useEffect(() => {
-    const handler = () => setPromptIdState(readFromUrl());
+    const handler = () => setConversationIdState(readFromUrl());
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, []);
 
-  return [promptId, setPromptId] as const;
+  return [conversationId, setConversationId] as const;
 }

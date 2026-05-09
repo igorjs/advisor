@@ -8,13 +8,13 @@ interface UseChatStreamResult {
   messages: ChatMessage[];
   isStreaming: boolean;
   toolStatus: string | null;
-  sendMessage: (promptPublicId: string, message: string) => void;
+  sendMessage: (conversationPublicId: string, message: string) => void;
 }
 
 /**
  * Connects to the SSE chat endpoint, parses agent events, and
  * accumulates a local message list. When the agent produces records,
- * invalidates the prompt query so RecordList picks them up.
+ * invalidates the conversation query so RecordList picks them up.
  *
  * No useEffect: the stream is started by sendMessage (event handler),
  * not by a render cycle.
@@ -28,7 +28,7 @@ export function useChatStream(): UseChatStreamResult {
   const abortRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback(
-    async (promptPublicId: string, message: string) => {
+    async (conversationPublicId: string, message: string) => {
       // Add user message to local state immediately
       setMessages((prev) => [...prev, { role: "user", content: message }]);
       setIsStreaming(true);
@@ -41,7 +41,7 @@ export function useChatStream(): UseChatStreamResult {
 
       try {
         const response = await fetch(
-          `/api/v1/prompts/${promptPublicId}/chat`,
+          `/api/v1/conversations/${conversationPublicId}/chat`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -122,9 +122,9 @@ export function useChatStream(): UseChatStreamResult {
               break;
 
             case "records":
-              // Records produced: invalidate prompt query so RecordList updates
+              // Records produced: invalidate conversation query so RecordList updates
               queryClient.invalidateQueries({
-                queryKey: ["prompts", promptPublicId],
+                queryKey: ["conversations", conversationPublicId],
               });
               toast.success(t("toast.promptCreated"));
               break;

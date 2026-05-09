@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
-import { messages, prompts, records } from "../db/schema.js";
+import { conversations, messages, records } from "../db/schema.js";
 import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
 import { LLM_TIMEOUT_MS } from "../config/llm.js";
 import { buildSystemPrompt } from "../config/prompts.js";
@@ -65,7 +65,7 @@ export interface AgentService {
    * Yields AgentEvents as the loop progresses.
    */
   processMessage(
-    promptPublicId: string,
+    conversationPublicId: string,
     userMessage: string,
   ): AsyncGenerator<AgentEvent>;
 }
@@ -82,18 +82,18 @@ export function createAgentService(
   });
 
   return {
-    async *processMessage(promptPublicId, userMessage) {
-      // Resolve prompt
-      const prompt = await db
+    async *processMessage(conversationPublicId, userMessage) {
+      // Resolve conversation
+      const conversation = await db
         .select()
-        .from(prompts)
+        .from(conversations)
         .where(
-          and(eq(prompts.publicId, promptPublicId), isNull(prompts.deletedAt)),
+          and(eq(conversations.publicId, conversationPublicId), isNull(conversations.deletedAt)),
         )
         .get();
 
-      if (!prompt) {
-        yield { type: "error", code: "NOT_FOUND", message: "Prompt not found." };
+      if (!conversation) {
+        yield { type: "error", code: "NOT_FOUND", message: "Conversation not found." };
         yield { type: "done" };
         return;
       }
@@ -101,14 +101,14 @@ export function createAgentService(
       // Save user message
       await db
         .insert(messages)
-        .values({ promptId: prompt.id, role: "user", content: userMessage })
+        .values({ conversationId: conversation.id, role: "user", content: userMessage })
         .run();
 
       // Load full conversation history for LLM context
       const history = await db
         .select()
         .from(messages)
-        .where(eq(messages.promptId, prompt.id))
+        .where(eq(messages.conversationId, conversation.id))
         .all();
 
       const llmMessages: OpenAI.ChatCompletionMessageParam[] = [
@@ -168,7 +168,7 @@ export function createAgentService(
           await db
             .insert(messages)
             .values({
-              promptId: prompt.id,
+              conversationId: conversation.id,
               role: "assistant",
               content: assistantMessage.content ?? "",
               toolCalls: JSON.stringify(assistantMessage.tool_calls),
@@ -217,7 +217,7 @@ export function createAgentService(
             await db
               .insert(messages)
               .values({
-                promptId: prompt.id,
+                conversationId: conversation.id,
                 role: "tool",
                 content: resultContent,
                 toolCallId: toolCall.id,
@@ -248,13 +248,13 @@ export function createAgentService(
           // Save assistant message
           await db
             .insert(messages)
-            .values({ promptId: prompt.id, role: "assistant", content })
+            .values({ conversationId: conversation.id, role: "assistant", content })
             .run();
 
           // Delete old records and insert new ones
           await db
             .delete(records)
-            .where(eq(records.promptId, prompt.id))
+            .where(eq(records.conversationId, conversation.id))
             .run();
 
           const insertedRecords: RecordResponse[] = [];
@@ -262,7 +262,7 @@ export function createAgentService(
             const row = await db
               .insert(records)
               .values({
-                promptId: prompt.id,
+                conversationId: conversation.id,
                 title: record.title,
                 description: record.description,
               })
@@ -271,11 +271,11 @@ export function createAgentService(
             insertedRecords.push(toRecordResponse(row!));
           }
 
-          // Mark prompt as complete
+          // Mark conversation as updated
           await db
-            .update(prompts)
-            .set({ status: "complete", updatedAt: sql`(datetime('now'))` })
-            .where(eq(prompts.id, prompt.id))
+            .update(conversations)
+            .set({ updatedAt: sql`(datetime('now'))` })
+            .where(eq(conversations.id, conversation.id))
             .run();
 
           yield { type: "records", records: insertedRecords };
@@ -286,7 +286,7 @@ export function createAgentService(
         // It's a follow-up question: save and return to client
         await db
           .insert(messages)
-          .values({ promptId: prompt.id, role: "assistant", content })
+          .values({ conversationId: conversation.id, role: "assistant", content })
           .run();
 
         yield { type: "assistant_delta", content };

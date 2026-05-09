@@ -1,24 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { createPrompt, getPrompt, reQueryPrompt } from "../api/prompts.js";
+import { createConversation, getConversation, reQueryConversation } from "../api/conversations.js";
 
-export function usePrompt(publicId: string | null) {
+export function useConversation(publicId: string | null) {
   return useQuery({
-    queryKey: ["prompts", publicId],
-    queryFn: () => getPrompt(publicId!),
+    queryKey: ["conversations", publicId],
+    queryFn: () => getConversation(publicId!),
     enabled: publicId !== null,
   });
 }
 
-export function useCreatePrompt() {
+export function useCreateConversation() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (text: string) => createPrompt(text),
+    mutationFn: (text: string) => createConversation(text),
     onSuccess: (data) => {
-      queryClient.setQueryData(["prompts", data.data.publicId], data);
+      queryClient.setQueryData(["conversations", data.data.publicId], data);
       toast.success(t("toast.promptCreated"));
     },
     onError: () => {
@@ -27,15 +27,15 @@ export function useCreatePrompt() {
   });
 }
 
-export function useReQueryPrompt() {
+export function useReQueryConversation() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ publicId, text }: { publicId: string; text: string }) =>
-      reQueryPrompt(publicId, text),
+      reQueryConversation(publicId, text),
     onSuccess: (data) => {
-      queryClient.setQueryData(["prompts", data.data.publicId], data);
+      queryClient.setQueryData(["conversations", data.data.publicId], data);
       toast.success(t("toast.promptRequeried"));
     },
     onError: () => {

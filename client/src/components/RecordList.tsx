@@ -7,16 +7,16 @@ import { Kbd } from "./Kbd.js";
 import { RecordCard } from "./RecordCard.js";
 
 interface RecordListProps {
-  promptPublicId: string;
+  conversationPublicId: string;
   records: RecordResponse[];
   disabled: boolean;
 }
 
-// Records come from the prompt query (single source of truth).
-// Mutations optimistically update the prompt cache directly.
-export function RecordList({ promptPublicId, records, disabled }: RecordListProps) {
-  const updateMutation = useUpdateRecord(promptPublicId);
-  const deleteMutation = useDeleteRecord(promptPublicId);
+// Records come from the conversation query (single source of truth).
+// Mutations optimistically update the conversation cache directly.
+export function RecordList({ conversationPublicId, records, disabled }: RecordListProps) {
+  const updateMutation = useUpdateRecord(conversationPublicId);
+  const deleteMutation = useDeleteRecord(conversationPublicId);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 

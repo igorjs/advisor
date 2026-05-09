@@ -1,9 +1,78 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4fcb1eb9-85b9-4159-9b89-af8b5b2a6868",
+  "id": "ea91e918-d64f-4fad-a11f-0d7dfb7b5a16",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "conversations": {
+      "name": "conversations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "public_id": {
+          "name": "public_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(datetime('now'))"
+        }
+      },
+      "indexes": {
+        "conversations_public_id_unique": {
+          "name": "conversations_public_id_unique",
+          "columns": [
+            "public_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "idempotency_keys": {
       "name": "idempotency_keys",
       "columns": {
@@ -43,8 +112,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "prompts": {
-      "name": "prompts",
+    "messages": {
+      "name": "messages",
       "columns": {
         "id": {
           "name": "id",
@@ -60,22 +129,44 @@
           "notNull": true,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
-        "text": {
-          "name": "text",
+        "role": {
+          "name": "role",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "deleted_at": {
-          "name": "deleted_at",
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "tool_calls": {
+          "name": "tool_calls",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "tool_call_id": {
+          "name": "tool_call_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -88,26 +179,32 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(datetime('now'))"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(datetime('now'))"
         }
       },
       "indexes": {
-        "prompts_public_id_unique": {
-          "name": "prompts_public_id_unique",
+        "messages_public_id_unique": {
+          "name": "messages_public_id_unique",
           "columns": [
             "public_id"
           ],
           "isUnique": true
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "messages_conversation_id_conversations_id_fk": {
+          "name": "messages_conversation_id_conversations_id_fk",
+          "tableFrom": "messages",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "conversation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
@@ -129,8 +226,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "prompt_id": {
-          "name": "prompt_id",
+        "conversation_id": {
+          "name": "conversation_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -156,6 +253,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -191,12 +296,12 @@
         }
       },
       "foreignKeys": {
-        "records_prompt_id_prompts_id_fk": {
-          "name": "records_prompt_id_prompts_id_fk",
+        "records_conversation_id_conversations_id_fk": {
+          "name": "records_conversation_id_conversations_id_fk",
           "tableFrom": "records",
-          "tableTo": "prompts",
+          "tableTo": "conversations",
           "columnsFrom": [
-            "prompt_id"
+            "conversation_id"
           ],
           "columnsTo": [
             "id"

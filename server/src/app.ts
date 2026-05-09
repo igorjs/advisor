@@ -9,11 +9,11 @@ import { createRateLimiter } from "./middleware/rate-limiter.js";
 import { securityMiddleware } from "./middleware/security.js";
 import { health } from "./routes/health.js";
 import { createChatRoutes } from "./routes/chat.js";
-import { createPromptRoutes } from "./routes/prompts.js";
+import { createConversationRoutes } from "./routes/conversations.js";
 import { createRecordRoutes } from "./routes/records.js";
 import { createAgentService } from "./services/agent.service.js";
 import type { LlmServiceConfig } from "./services/llm.service.js";
-import { createPromptService } from "./services/prompt.service.js";
+import { createConversationService } from "./services/conversation.service.js";
 import { createRecordService } from "./services/record.service.js";
 import type { SearchService } from "./services/search.service.js";
 
@@ -41,7 +41,7 @@ export function createApp({ db, llmConfig, search, clientOrigin }: AppDependenci
   // Safety net for unhandled errors; services use Result so this rarely fires
   app.onError(errorHandler);
 
-  const promptService = createPromptService(db);
+  const conversationService = createConversationService(db);
   const recordService = createRecordService(db);
   const agentService = createAgentService(db, llmConfig, search);
 
@@ -57,21 +57,21 @@ export function createApp({ db, llmConfig, search, clientOrigin }: AppDependenci
   // require migrating existing clients
   const v1 = new Hono();
 
-  const promptRoutes = createPromptRoutes(promptService);
+  const conversationRoutes = createConversationRoutes(conversationService);
   const recordRoutes = createRecordRoutes(recordService);
   const chatRoutes = createChatRoutes(agentService);
 
-  v1.use("/prompts", rateLimiter);
-  v1.use("/prompts", idempotency);
-  v1.use("/prompts/:promptId/records/:recordId", rateLimiter);
+  v1.use("/conversations", rateLimiter);
+  v1.use("/conversations", idempotency);
+  v1.use("/conversations/:conversationId/records/:recordId", rateLimiter);
 
-  v1.route("/prompts", promptRoutes);
-  // Nested under prompts: records are owned by a prompt, the URL reflects this
-  v1.route("/prompts/:promptId/records", recordRoutes);
+  v1.route("/conversations", conversationRoutes);
+  // Nested under conversations: records are owned by a conversation, the URL reflects this
+  v1.route("/conversations/:conversationId/records", recordRoutes);
   // Chat endpoint uses SSE streaming, rate limited but no idempotency
   // (each message is a new turn, not a retry)
-  v1.use("/prompts/:promptId/chat", rateLimiter);
-  v1.route("/prompts", chatRoutes);
+  v1.use("/conversations/:conversationId/chat", rateLimiter);
+  v1.route("/conversations", chatRoutes);
 
   app.route("/api/v1", v1);
 

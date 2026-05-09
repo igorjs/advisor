@@ -6,10 +6,9 @@ export interface RecordResponse {
   updatedAt: string;
 }
 
-export interface PromptResponse {
+export interface ConversationResponse {
   publicId: string;
-  text: string;
-  status: string;
+  title: string;
   createdAt: string;
   updatedAt: string;
   records: RecordResponse[];

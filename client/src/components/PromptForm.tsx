@@ -6,11 +6,11 @@ import { Kbd, modKey } from "./Kbd.js";
 interface PromptFormProps {
   isReQuery: boolean;
   isSubmitting: boolean;
-  promptText: string | null;
+  conversationTitle: string | null;
   onSubmit: (text: string) => void;
 }
 
-export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: PromptFormProps) {
+export function PromptForm({ isReQuery, isSubmitting, conversationTitle, onSubmit }: PromptFormProps) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -18,9 +18,9 @@ export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: Pr
   // Sync text when the prompt loads after creation/re-query.
   // Derived from props during render, no useEffect needed.
   const [lastSyncedText, setLastSyncedText] = useState<string | null>(null);
-  if (promptText !== null && promptText !== lastSyncedText) {
-    setText(promptText);
-    setLastSyncedText(promptText);
+  if (conversationTitle !== null && conversationTitle !== lastSyncedText) {
+    setText(conversationTitle);
+    setLastSyncedText(conversationTitle);
   }
 
   function doSubmit() {

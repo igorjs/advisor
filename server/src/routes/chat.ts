@@ -14,15 +14,15 @@ export function createChatRoutes(agentService: AgentService) {
   // SSE endpoint: streams agent events as the agentic loop progresses.
   // The client receives real-time updates for tool execution, follow-up
   // questions, and final record generation.
-  chat.post("/:promptId/chat", async (c) => {
-    const promptId = c.req.param("promptId");
+  chat.post("/:conversationId/chat", async (c) => {
+    const conversationId = c.req.param("conversationId");
     const body = await c.req.json().catch(() => null);
     const parsed = chatMessageSchema.safeParse(body);
 
     if (!parsed.success) return validationError(c, parsed.error.issues);
 
     return streamSSE(c, async (stream) => {
-      const events = agentService.processMessage(promptId, parsed.data.message);
+      const events = agentService.processMessage(conversationId, parsed.data.message);
 
       for await (const event of events) {
         await stream.writeSSE({

@@ -6,10 +6,10 @@ import { Ok } from "../lib/result.js";
 import type { SearchService } from "../services/search.service.js";
 import { jsonBody, patchJson, postJson } from "./helpers.js";
 
-interface PromptData {
+interface ConversationData {
   data: {
     publicId: string;
-    text: string;
+    title: string;
     records: Array<{ publicId: string; title: string; description: string }>;
   };
 }
@@ -57,22 +57,22 @@ describe("API Integration", () => {
     });
   });
 
-  describe("POST /api/v1/prompts", () => {
-    it("creates a prompt with chatting status and no records", async () => {
+  describe("POST /api/v1/conversations", () => {
+    it("creates a conversation with no records", async () => {
       // Act
-      const res = await app.request("/api/v1/prompts", postJson({ text: "Give me tax advice" }));
+      const res = await app.request("/api/v1/conversations", postJson({ title: "Give me tax advice" }));
 
       // Assert
       expect(res.status).toBe(201);
-      const body = await jsonBody<PromptData>(res);
-      expect(body.data.text).toBe("Give me tax advice");
+      const body = await jsonBody<ConversationData>(res);
+      expect(body.data.title).toBe("Give me tax advice");
       expect(body.data.publicId).toBeTruthy();
       expect(body.data.records).toHaveLength(0);
     });
 
-    it("returns 400 for missing text", async () => {
+    it("returns 400 for missing title", async () => {
       // Act
-      const res = await app.request("/api/v1/prompts", postJson({}));
+      const res = await app.request("/api/v1/conversations", postJson({}));
 
       // Assert
       expect(res.status).toBe(400);
@@ -80,34 +80,34 @@ describe("API Integration", () => {
       expect(body.error.code).toBe("VALIDATION_ERROR");
     });
 
-    it("returns 400 for empty text", async () => {
+    it("returns 400 for empty title", async () => {
       // Act
-      const res = await app.request("/api/v1/prompts", postJson({ text: "" }));
+      const res = await app.request("/api/v1/conversations", postJson({ title: "" }));
 
       // Assert
       expect(res.status).toBe(400);
     });
   });
 
-  describe("GET /api/v1/prompts/:publicId", () => {
-    it("returns a prompt with its records", async () => {
+  describe("GET /api/v1/conversations/:publicId", () => {
+    it("returns a conversation with its records", async () => {
       // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
+      const createRes = await app.request("/api/v1/conversations", postJson({ title: "test" }));
+      const created = await jsonBody<ConversationData>(createRes);
 
       // Act
-      const res = await app.request(`/api/v1/prompts/${created.data.publicId}`);
+      const res = await app.request(`/api/v1/conversations/${created.data.publicId}`);
 
       // Assert
       expect(res.status).toBe(200);
-      const body = await jsonBody<PromptData>(res);
+      const body = await jsonBody<ConversationData>(res);
       expect(body.data.publicId).toBe(created.data.publicId);
       expect(body.data.records).toHaveLength(0);
     });
 
     it("returns 404 for unknown publicId", async () => {
       // Act
-      const res = await app.request("/api/v1/prompts/nonexistent");
+      const res = await app.request("/api/v1/conversations/nonexistent");
 
       // Assert
       expect(res.status).toBe(404);
@@ -116,22 +116,22 @@ describe("API Integration", () => {
     });
   });
 
-  describe("PATCH /api/v1/prompts/:publicId", () => {
-    it("resets prompt text and status to chatting", async () => {
+  describe("PATCH /api/v1/conversations/:publicId", () => {
+    it("resets conversation title", async () => {
       // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "original" }));
-      const created = await jsonBody<PromptData>(createRes);
+      const createRes = await app.request("/api/v1/conversations", postJson({ title: "original" }));
+      const created = await jsonBody<ConversationData>(createRes);
 
       // Act
       const res = await app.request(
-        `/api/v1/prompts/${created.data.publicId}`,
-        patchJson({ text: "updated prompt" }),
+        `/api/v1/conversations/${created.data.publicId}`,
+        patchJson({ title: "updated conversation" }),
       );
 
       // Assert
       expect(res.status).toBe(200);
-      const body = await jsonBody<PromptData>(res);
-      expect(body.data.text).toBe("updated prompt");
+      const body = await jsonBody<ConversationData>(res);
+      expect(body.data.title).toBe("updated conversation");
       expect(body.data.publicId).toBe(created.data.publicId);
       expect(body.data.records).toHaveLength(0);
     });

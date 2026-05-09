@@ -2,8 +2,7 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
-import { Err, Ok } from "../lib/result.js";
-import type { LlmService } from "../services/llm.service.js";
+import { Ok } from "../lib/result.js";
 import type { SearchService } from "../services/search.service.js";
 import { jsonBody, patchJson, postJson } from "./helpers.js";
 
@@ -15,36 +14,18 @@ interface PromptData {
   };
 }
 
-interface RecordData {
-  data: { publicId: string; title: string; description: string };
-}
-
 interface ErrorData {
   error: { code: string; message: string };
-}
-
-function createMockLlm(overrides?: Partial<LlmService>): LlmService {
-  return {
-    generateRecords: overrides?.generateRecords ??
-      (() =>
-        Promise.resolve(
-          Ok([
-            { title: "Tip 1", description: "First tip" },
-            { title: "Tip 2", description: "Second tip" },
-          ]),
-        )),
-  };
 }
 
 const TEST_LLM_CONFIG = { apiKey: "test", baseUrl: "http://localhost", model: "test" };
 const mockSearch: SearchService = { search: () => Promise.resolve(Ok([])) };
 
-function buildApp(db: DatabaseConnection["db"], llm?: LlmService) {
+function buildApp(db: DatabaseConnection["db"]) {
   return createApp({
     db,
     llmConfig: TEST_LLM_CONFIG,
     search: mockSearch,
-    llm: llm ?? createMockLlm(),
     clientOrigin: "http://localhost:5173",
   });
 }
@@ -77,7 +58,7 @@ describe("API Integration", () => {
   });
 
   describe("POST /api/v1/prompts", () => {
-    it("creates a prompt and returns it with records", async () => {
+    it("creates a prompt with chatting status and no records", async () => {
       // Act
       const res = await app.request("/api/v1/prompts", postJson({ text: "Give me tax advice" }));
 
@@ -86,7 +67,7 @@ describe("API Integration", () => {
       const body = await jsonBody<PromptData>(res);
       expect(body.data.text).toBe("Give me tax advice");
       expect(body.data.publicId).toBeTruthy();
-      expect(body.data.records).toHaveLength(2);
+      expect(body.data.records).toHaveLength(0);
     });
 
     it("returns 400 for missing text", async () => {
@@ -106,25 +87,6 @@ describe("API Integration", () => {
       // Assert
       expect(res.status).toBe(400);
     });
-
-    it("returns LLM error status when LLM fails", async () => {
-      // Arrange
-      const failApp = buildApp(
-        conn.db,
-        createMockLlm({
-          generateRecords: () =>
-            Promise.resolve(Err({ code: "LLM_TIMEOUT", message: "Timed out" })),
-        }),
-      );
-
-      // Act
-      const res = await failApp.request("/api/v1/prompts", postJson({ text: "test" }));
-
-      // Assert
-      expect(res.status).toBe(504);
-      const body = await jsonBody<ErrorData>(res);
-      expect(body.error.code).toBe("LLM_TIMEOUT");
-    });
   });
 
   describe("GET /api/v1/prompts/:publicId", () => {
@@ -140,7 +102,7 @@ describe("API Integration", () => {
       expect(res.status).toBe(200);
       const body = await jsonBody<PromptData>(res);
       expect(body.data.publicId).toBe(created.data.publicId);
-      expect(body.data.records).toHaveLength(2);
+      expect(body.data.records).toHaveLength(0);
     });
 
     it("returns 404 for unknown publicId", async () => {
@@ -155,21 +117,13 @@ describe("API Integration", () => {
   });
 
   describe("PATCH /api/v1/prompts/:publicId", () => {
-    it("re-queries and replaces records", async () => {
+    it("resets prompt text and status to chatting", async () => {
       // Arrange
       const createRes = await app.request("/api/v1/prompts", postJson({ text: "original" }));
       const created = await jsonBody<PromptData>(createRes);
 
-      const reQueryApp = buildApp(
-        conn.db,
-        createMockLlm({
-          generateRecords: () =>
-            Promise.resolve(Ok([{ title: "New Tip", description: "New desc" }])),
-        }),
-      );
-
       // Act
-      const res = await reQueryApp.request(
+      const res = await app.request(
         `/api/v1/prompts/${created.data.publicId}`,
         patchJson({ text: "updated prompt" }),
       );
@@ -179,85 +133,11 @@ describe("API Integration", () => {
       const body = await jsonBody<PromptData>(res);
       expect(body.data.text).toBe("updated prompt");
       expect(body.data.publicId).toBe(created.data.publicId);
-      expect(body.data.records).toHaveLength(1);
-      expect(body.data.records[0]?.title).toBe("New Tip");
+      expect(body.data.records).toHaveLength(0);
     });
   });
 
-  describe("PATCH /api/v1/prompts/:promptId/records/:recordId", () => {
-    it("updates a record's title", async () => {
-      // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
-      const promptId = created.data.publicId;
-      const recordId = created.data.records[0]?.publicId ?? "";
-
-      // Act
-      const res = await app.request(
-        `/api/v1/prompts/${promptId}/records/${recordId}`,
-        patchJson({ title: "Updated Title" }),
-      );
-
-      // Assert
-      expect(res.status).toBe(200);
-      const body = await jsonBody<RecordData>(res);
-      expect(body.data.title).toBe("Updated Title");
-    });
-
-    it("returns 400 when no fields provided", async () => {
-      // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
-      const promptId = created.data.publicId;
-      const recordId = created.data.records[0]?.publicId ?? "";
-
-      // Act
-      const res = await app.request(
-        `/api/v1/prompts/${promptId}/records/${recordId}`,
-        patchJson({}),
-      );
-
-      // Assert
-      expect(res.status).toBe(400);
-    });
-  });
-
-  describe("DELETE /api/v1/prompts/:promptId/records/:recordId", () => {
-    it("soft-deletes a record and returns 204", async () => {
-      // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
-      const promptId = created.data.publicId;
-      const recordId = created.data.records[0]?.publicId ?? "";
-
-      // Act
-      const res = await app.request(
-        `/api/v1/prompts/${promptId}/records/${recordId}`,
-        { method: "DELETE" },
-      );
-
-      // Assert
-      expect(res.status).toBe(204);
-
-      // Verify record is gone via prompt endpoint
-      const getRes = await app.request(`/api/v1/prompts/${promptId}`);
-      const getBody = await jsonBody<PromptData>(getRes);
-      expect(getBody.data.records).toHaveLength(1);
-    });
-
-    it("returns 404 for unknown record", async () => {
-      // Arrange
-      const createRes = await app.request("/api/v1/prompts", postJson({ text: "test" }));
-      const created = await jsonBody<PromptData>(createRes);
-
-      // Act
-      const res = await app.request(
-        `/api/v1/prompts/${created.data.publicId}/records/nonexistent`,
-        { method: "DELETE" },
-      );
-
-      // Assert
-      expect(res.status).toBe(404);
-    });
-  });
+  // Record CRUD (PATCH/DELETE) is tested at the service level in services.test.ts.
+  // API-level record tests require records seeded via the agent, which is tested
+  // through Playwright e2e instead.
 });

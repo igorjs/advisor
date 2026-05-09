@@ -12,7 +12,7 @@ import { createChatRoutes } from "./routes/chat.js";
 import { createPromptRoutes } from "./routes/prompts.js";
 import { createRecordRoutes } from "./routes/records.js";
 import { createAgentService } from "./services/agent.service.js";
-import { createLlmService, type LlmService, type LlmServiceConfig } from "./services/llm.service.js";
+import type { LlmServiceConfig } from "./services/llm.service.js";
 import { createPromptService } from "./services/prompt.service.js";
 import { createRecordService } from "./services/record.service.js";
 import type { SearchService } from "./services/search.service.js";
@@ -22,15 +22,13 @@ interface AppDependencies {
   llmConfig: LlmServiceConfig;
   search: SearchService;
   clientOrigin: string;
-  // Optional: inject a mock LLM for testing. If omitted, created from llmConfig.
-  llm?: LlmService;
 }
 
 /**
  * Dependencies are injected rather than imported globally so the app
  * can be instantiated with test doubles (mock LLM, in-memory DB).
  */
-export function createApp({ db, llmConfig, search, clientOrigin, llm: llmOverride }: AppDependencies) {
+export function createApp({ db, llmConfig, search, clientOrigin }: AppDependencies) {
   const app = new Hono();
 
   // Middleware order matters: logger first (to capture timing), security
@@ -43,8 +41,7 @@ export function createApp({ db, llmConfig, search, clientOrigin, llm: llmOverrid
   // Safety net for unhandled errors; services use Result so this rarely fires
   app.onError(errorHandler);
 
-  const llm = llmOverride ?? createLlmService(llmConfig);
-  const promptService = createPromptService(db, llm);
+  const promptService = createPromptService(db);
   const recordService = createRecordService(db);
   const agentService = createAgentService(db, llmConfig, search);
 

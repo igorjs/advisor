@@ -1,23 +1,10 @@
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
-import { Err, Ok } from "../lib/result.js";
-import type { LlmService } from "../services/llm.service.js";
+import { eq } from "drizzle-orm";
+import { prompts, records } from "../db/schema.js";
 import { createPromptService, type PromptService } from "../services/prompt.service.js";
 import { createRecordService, type RecordService } from "../services/record.service.js";
-
-function createMockLlm(overrides?: Partial<LlmService>): LlmService {
-  return {
-    generateRecords: overrides?.generateRecords ??
-      (() =>
-        Promise.resolve(
-          Ok([
-            { title: "Tip 1", description: "First tip" },
-            { title: "Tip 2", description: "Second tip" },
-          ]),
-        )),
-  };
-}
 
 describe("PromptService", () => {
   let conn: DatabaseConnection;
@@ -26,7 +13,7 @@ describe("PromptService", () => {
   beforeEach(async () => {
     conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
     await migrate(conn.db, { migrationsFolder: "./drizzle" });
-    promptService = createPromptService(conn.db, createMockLlm());
+    promptService = createPromptService(conn.db);
   });
 
   afterEach(() => {
@@ -34,7 +21,7 @@ describe("PromptService", () => {
   });
 
   describe("createPrompt", () => {
-    it("creates a prompt and returns it with records", async () => {
+    it("creates a prompt with chatting status and empty records", async () => {
       // Act
       const result = await promptService.createPrompt("Give me tax advice");
 
@@ -43,28 +30,7 @@ describe("PromptService", () => {
       if (result.ok) {
         expect(result.value.text).toBe("Give me tax advice");
         expect(result.value.publicId).toBeTruthy();
-        expect(result.value.records).toHaveLength(2);
-        expect(result.value.records[0]?.title).toBe("Tip 1");
-      }
-    });
-
-    it("returns Err when LLM fails", async () => {
-      // Arrange
-      const service = createPromptService(
-        conn.db,
-        createMockLlm({
-          generateRecords: () =>
-            Promise.resolve(Err({ code: "LLM_TIMEOUT", message: "Timed out" })),
-        }),
-      );
-
-      // Act
-      const result = await service.createPrompt("test");
-
-      // Assert
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.code).toBe("LLM_TIMEOUT");
+        expect(result.value.records).toHaveLength(0);
       }
     });
   });
@@ -82,7 +48,7 @@ describe("PromptService", () => {
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.publicId).toBe(created.value.publicId);
-        expect(result.value.records).toHaveLength(2);
+        expect(result.value.records).toHaveLength(0);
       }
     });
 
@@ -99,23 +65,13 @@ describe("PromptService", () => {
   });
 
   describe("reQueryPrompt", () => {
-    it("updates prompt text and replaces records", async () => {
+    it("resets prompt text and status to chatting", async () => {
       // Arrange
       const created = await promptService.createPrompt("original prompt");
       if (!created.ok) throw new Error("Setup failed");
 
-      const service = createPromptService(
-        conn.db,
-        createMockLlm({
-          generateRecords: () =>
-            Promise.resolve(
-              Ok([{ title: "New Tip", description: "New description" }]),
-            ),
-        }),
-      );
-
       // Act
-      const result = await service.reQueryPrompt(
+      const result = await promptService.reQueryPrompt(
         created.value.publicId,
         "updated prompt",
       );
@@ -125,8 +81,7 @@ describe("PromptService", () => {
       if (result.ok) {
         expect(result.value.text).toBe("updated prompt");
         expect(result.value.publicId).toBe(created.value.publicId);
-        expect(result.value.records).toHaveLength(1);
-        expect(result.value.records[0]?.title).toBe("New Tip");
+        expect(result.value.records).toHaveLength(0);
       }
     });
 
@@ -138,40 +93,6 @@ describe("PromptService", () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error.code).toBe("NOT_FOUND");
-      }
-    });
-
-    it("returns LLM error without modifying existing data", async () => {
-      // Arrange
-      const created = await promptService.createPrompt("original");
-      if (!created.ok) throw new Error("Setup failed");
-
-      const service = createPromptService(
-        conn.db,
-        createMockLlm({
-          generateRecords: () =>
-            Promise.resolve(Err({ code: "LLM_ERROR", message: "API down" })),
-        }),
-      );
-
-      // Act
-      const result = await service.reQueryPrompt(
-        created.value.publicId,
-        "new text",
-      );
-
-      // Assert
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.error.code).toBe("LLM_ERROR");
-      }
-
-      // Verify original data is unchanged
-      const original = await promptService.getPrompt(created.value.publicId);
-      expect(original.ok).toBe(true);
-      if (original.ok) {
-        expect(original.value.text).toBe("original");
-        expect(original.value.records).toHaveLength(2);
       }
     });
   });
@@ -210,9 +131,27 @@ describe("RecordService", () => {
   beforeEach(async () => {
     conn = createDatabase({ url: ":memory:", syncUrl: null, authToken: null });
     await migrate(conn.db, { migrationsFolder: "./drizzle" });
-    promptService = createPromptService(conn.db, createMockLlm());
+    promptService = createPromptService(conn.db);
     recordService = createRecordService(conn.db);
   });
+
+  // Seed records directly since createPrompt no longer calls LLM.
+  // Returns the prompt publicId and record publicIds for use in tests.
+  async function seedPromptWithRecords() {
+    const created = await promptService.createPrompt("test");
+    if (!created.ok) throw new Error("Setup failed");
+
+    const prompt = await conn.db.select().from(prompts).where(eq(prompts.publicId, created.value.publicId)).get();
+    if (!prompt) throw new Error("Prompt not found");
+
+    const r1 = await conn.db.insert(records).values({ promptId: prompt.id, title: "Tip 1", description: "First tip" }).returning().get();
+    const r2 = await conn.db.insert(records).values({ promptId: prompt.id, title: "Tip 2", description: "Second tip" }).returning().get();
+
+    return {
+      promptPublicId: created.value.publicId,
+      recordPublicIds: [r1!.publicId, r2!.publicId],
+    };
+  }
 
   afterEach(() => {
     closeDatabase(conn);
@@ -221,11 +160,10 @@ describe("RecordService", () => {
   describe("getRecords", () => {
     it("returns records for a prompt", async () => {
       // Arrange
-      const created = await promptService.createPrompt("test");
-      if (!created.ok) throw new Error("Setup failed");
+      const { promptPublicId } = await seedPromptWithRecords();
 
       // Act
-      const result = await recordService.getRecords(created.value.publicId);
+      const result = await recordService.getRecords(promptPublicId);
 
       // Assert
       expect(result.ok).toBe(true);
@@ -249,13 +187,12 @@ describe("RecordService", () => {
   describe("updateRecord", () => {
     it("updates a record's title", async () => {
       // Arrange
-      const created = await promptService.createPrompt("test");
-      if (!created.ok) throw new Error("Setup failed");
-      const recordId = created.value.records[0]?.publicId ?? "";
+      const { promptPublicId, recordPublicIds } = await seedPromptWithRecords();
+      const recordId = recordPublicIds[0] ?? "";
 
       // Act
       const result = await recordService.updateRecord(
-        created.value.publicId,
+        promptPublicId,
         recordId,
         { title: "Updated Title" },
       );
@@ -270,13 +207,12 @@ describe("RecordService", () => {
 
     it("updates a record's description", async () => {
       // Arrange
-      const created = await promptService.createPrompt("test");
-      if (!created.ok) throw new Error("Setup failed");
-      const recordId = created.value.records[0]?.publicId ?? "";
+      const { promptPublicId, recordPublicIds } = await seedPromptWithRecords();
+      const recordId = recordPublicIds[0] ?? "";
 
       // Act
       const result = await recordService.updateRecord(
-        created.value.publicId,
+        promptPublicId,
         recordId,
         { description: "Updated desc" },
       );
@@ -311,20 +247,19 @@ describe("RecordService", () => {
   describe("deleteRecord", () => {
     it("soft-deletes a record so it no longer appears in getRecords", async () => {
       // Arrange
-      const created = await promptService.createPrompt("test");
-      if (!created.ok) throw new Error("Setup failed");
-      const recordId = created.value.records[0]?.publicId ?? "";
+      const { promptPublicId, recordPublicIds } = await seedPromptWithRecords();
+      const recordId = recordPublicIds[0] ?? "";
 
       // Act
       const deleteResult = await recordService.deleteRecord(
-        created.value.publicId,
+        promptPublicId,
         recordId,
       );
 
       // Assert
       expect(deleteResult.ok).toBe(true);
 
-      const remaining = await recordService.getRecords(created.value.publicId);
+      const remaining = await recordService.getRecords(promptPublicId);
       expect(remaining.ok).toBe(true);
       if (remaining.ok) {
         expect(remaining.value).toHaveLength(1);

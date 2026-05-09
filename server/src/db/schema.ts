@@ -11,6 +11,9 @@ export const prompts = sqliteTable("prompts", {
   // Nullable: populated when auth is added, enables per-tenant data isolation
   userId: text("user_id"),
   text: text("text").notNull(),
+  // Tracks conversation state: 'chatting' while LLM is asking follow-ups,
+  // 'complete' when structured records have been produced
+  status: text("status").notNull().default("chatting"),
   // Soft delete over hard delete: preserves audit trail for future SaaS compliance
   deletedAt: text("deleted_at"),
   createdAt: text("created_at")
@@ -39,6 +42,29 @@ export const records = sqliteTable("records", {
     .notNull()
     .default(sql`(datetime('now'))`),
   updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+// Conversation history for multi-turn agentic interactions.
+// The LLM sees the full message history on each turn to maintain context.
+export const messages = sqliteTable("messages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: text("public_id")
+    .notNull()
+    .unique()
+    .$defaultFn(() => crypto.randomUUID()),
+  promptId: integer("prompt_id")
+    .notNull()
+    .references(() => prompts.id, { onDelete: "cascade" }),
+  // 'user' = human input, 'assistant' = LLM response, 'tool' = search results
+  role: text("role").notNull(),
+  content: text("content").notNull(),
+  // JSON array of tool calls when the LLM requests tool execution
+  toolCalls: text("tool_calls"),
+  // References the specific tool_call this message responds to
+  toolCallId: text("tool_call_id"),
+  createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
 });

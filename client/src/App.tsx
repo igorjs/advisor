@@ -9,6 +9,7 @@ import { usePrompt } from "./hooks/usePrompts.js";
 export function App() {
   const { t } = useTranslation();
   const [activePromptId, setActivePromptId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { data, isLoading, error, refetch } = usePrompt(activePromptId);
 
   const records = data?.data.records ?? [];
@@ -27,6 +28,7 @@ export function App() {
         <PromptForm
           activePromptId={activePromptId}
           onPromptCreated={setActivePromptId}
+          onSubmittingChange={setIsSubmitting}
         />
 
         {isLoading && <RecordSkeleton />}
@@ -36,7 +38,11 @@ export function App() {
             during background refetches that briefly set isLoading=true */}
         <Activity mode={hasRecords ? "visible" : "hidden"}>
           {activePromptId && (
-            <RecordList promptPublicId={activePromptId} records={records} />
+            <RecordList
+              promptPublicId={activePromptId}
+              records={records}
+              disabled={isSubmitting}
+            />
           )}
         </Activity>
       </main>

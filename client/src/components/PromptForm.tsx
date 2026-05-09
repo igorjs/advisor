@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCreatePrompt, usePrompt, useReQueryPrompt } from "../hooks/usePrompts.js";
 
 interface PromptFormProps {
   activePromptId: string | null;
   onPromptCreated: (publicId: string) => void;
+  onSubmittingChange: (isSubmitting: boolean) => void;
 }
 
-export function PromptForm({ activePromptId, onPromptCreated }: PromptFormProps) {
+export function PromptForm({ activePromptId, onPromptCreated, onSubmittingChange }: PromptFormProps) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
 
@@ -17,6 +18,11 @@ export function PromptForm({ activePromptId, onPromptCreated }: PromptFormProps)
 
   const isLoading = createMutation.isPending || reQueryMutation.isPending;
   const isReQuery = activePromptId !== null;
+
+  // Notify parent when submission state changes so it can disable record actions
+  useEffect(() => {
+    onSubmittingChange(isLoading);
+  }, [isLoading, onSubmittingChange]);
 
   // Sync text with active prompt when it loads
   const promptText = promptData?.data.text;

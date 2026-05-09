@@ -6,7 +6,7 @@
   "prompt": {
     "placeholder": "Enter your question for the advisor...",
     "submit": "Get Advice",
-    "requery": "Update & Re-query",
+    "requery": "Refresh Advice",
     "loading": "Generating advice...",
     "label": "Your prompt"
   },

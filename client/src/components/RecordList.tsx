@@ -6,11 +6,12 @@ import { RecordCard } from "./RecordCard.js";
 interface RecordListProps {
   promptPublicId: string;
   records: RecordResponse[];
+  disabled: boolean;
 }
 
 // Records come from the prompt query (single source of truth).
 // Mutations optimistically update the prompt cache directly.
-export function RecordList({ promptPublicId, records }: RecordListProps) {
+export function RecordList({ promptPublicId, records, disabled }: RecordListProps) {
   const updateMutation = useUpdateRecord(promptPublicId);
   const deleteMutation = useDeleteRecord(promptPublicId);
 
@@ -25,6 +26,7 @@ export function RecordList({ promptPublicId, records }: RecordListProps) {
           key={record.publicId}
           record={record}
           isUpdating={updateMutation.isPending}
+          disabled={disabled}
           onUpdate={(updateData) =>
             updateMutation.mutate({
               recordPublicId: record.publicId,

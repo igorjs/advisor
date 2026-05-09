@@ -7,6 +7,7 @@ interface RecordCardProps {
   onUpdate: (data: { title?: string; description?: string }) => void;
   onDelete: () => void;
   isUpdating: boolean;
+  disabled: boolean;
 }
 
 export function RecordCard({
@@ -14,6 +15,7 @@ export function RecordCard({
   onUpdate,
   onDelete,
   isUpdating,
+  disabled,
 }: RecordCardProps) {
   const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
@@ -50,7 +52,7 @@ export function RecordCard({
   }
 
   return (
-    <div className="animate-fade-in rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <div className={`animate-fade-in rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${disabled ? "pointer-events-none opacity-50" : ""}`}>
       {isEditing ? (
         <div className="space-y-3">
           <input
@@ -58,26 +60,29 @@ export function RecordCard({
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
             aria-label={t("records.editTitle")}
-            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            disabled={disabled}
+            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
           />
           <textarea
             value={editDescription}
             onChange={(e) => setEditDescription(e.target.value)}
             aria-label={t("records.editDescription")}
             rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            disabled={disabled}
+            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
           />
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              disabled={isUpdating}
+              disabled={isUpdating || disabled}
               className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-700 disabled:opacity-50"
             >
               {t("records.save")}
             </button>
             <button
               onClick={handleCancel}
-              className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              disabled={disabled}
+              className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
             >
               {t("records.cancel")}
             </button>
@@ -92,13 +97,15 @@ export function RecordCard({
             <div className="ml-4 flex shrink-0 gap-1">
               <button
                 onClick={() => setIsEditing(true)}
-                className="rounded px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                disabled={disabled}
+                className="rounded px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
               >
                 {t("records.edit")}
               </button>
               <button
                 onClick={handleDelete}
-                className={`rounded px-2 py-1 text-xs transition-colors ${
+                disabled={disabled}
+                className={`rounded px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
                   isConfirmingDelete
                     ? "bg-red-100 text-red-700"
                     : "text-gray-500 hover:bg-red-50 hover:text-red-600"

@@ -18,6 +18,7 @@ export interface PromptResponse {
 export interface ChatMessage {
   role: "user" | "assistant" | "tool";
   content: string;
+  toolStatus?: "loading" | "done";
 }
 
 export type AgentEvent =

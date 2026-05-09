@@ -102,12 +102,23 @@ export function useChatStream(): UseChatStreamResult {
               setToolStatus(`Searching: ${event.query}`);
               setMessages((prev) => [
                 ...prev,
-                { role: "tool", content: `Searching: ${event.query}` },
+                { role: "tool", content: event.query, toolStatus: "loading" },
               ]);
               break;
 
             case "tool_result":
               setToolStatus(null);
+              // Mark the last tool message as done
+              setMessages((prev) =>
+                prev.map((msg, i) => {
+                  // Find the last loading tool message
+                  const isLastLoadingTool =
+                    msg.role === "tool" &&
+                    msg.toolStatus === "loading" &&
+                    !prev.slice(i + 1).some((m) => m.role === "tool" && m.toolStatus === "loading");
+                  return isLastLoadingTool ? { role: msg.role, content: msg.content, toolStatus: "done" as const } : msg;
+                }),
+              );
               break;
 
             case "records":

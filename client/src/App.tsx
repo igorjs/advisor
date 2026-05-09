@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Activity, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PromptForm } from "./components/PromptForm.js";
@@ -12,6 +12,7 @@ export function App() {
   const { data, isLoading, error, refetch } = usePrompt(activePromptId);
 
   const records = data?.data.records ?? [];
+  const hasRecords = activePromptId !== null && !isLoading && !error;
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
@@ -30,9 +31,14 @@ export function App() {
 
         {isLoading && <RecordSkeleton />}
         {error && <ErrorBanner error={error} onRetry={() => refetch()} />}
-        {activePromptId && !isLoading && !error && (
-          <RecordList promptPublicId={activePromptId} records={records} />
-        )}
+
+        {/* Activity preserves RecordList state (inline edits, scroll position)
+            during background refetches that briefly set isLoading=true */}
+        <Activity mode={hasRecords ? "visible" : "hidden"}>
+          {activePromptId && (
+            <RecordList promptPublicId={activePromptId} records={records} />
+          )}
+        </Activity>
       </main>
     </div>
   );

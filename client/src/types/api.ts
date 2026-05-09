@@ -9,10 +9,25 @@ export interface RecordResponse {
 export interface PromptResponse {
   publicId: string;
   text: string;
+  status: string;
   createdAt: string;
   updatedAt: string;
   records: RecordResponse[];
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant" | "tool";
+  content: string;
+}
+
+export type AgentEvent =
+  | { type: "assistant_delta"; content: string }
+  | { type: "assistant_end"; fullContent: string }
+  | { type: "tool_start"; name: string; query: string }
+  | { type: "tool_result"; results: number }
+  | { type: "records"; records: RecordResponse[] }
+  | { type: "error"; code: string; message: string }
+  | { type: "done" };
 
 export interface DataResponse<T> {
   data: T;

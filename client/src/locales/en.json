@@ -23,6 +23,10 @@
     "editTitle": "Edit title",
     "editDescription": "Edit description"
   },
+  "chat": {
+    "placeholder": "Reply to the advisor...",
+    "send": "Send"
+  },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "retry": "Retry",

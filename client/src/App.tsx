@@ -1,9 +1,12 @@
 import { Activity } from "react";
 import { useTranslation } from "react-i18next";
+import { ChatInput } from "./components/ChatInput.js";
+import { ChatThread } from "./components/ChatThread.js";
 import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PromptForm } from "./components/PromptForm.js";
 import { RecordList } from "./components/RecordList.js";
 import { RecordSkeleton } from "./components/RecordSkeleton.js";
+import { useChatStream } from "./hooks/useChatStream.js";
 import { usePromptId } from "./hooks/usePromptId.js";
 import { useCreatePrompt, usePrompt, useReQueryPrompt } from "./hooks/usePrompts.js";
 
@@ -14,22 +17,35 @@ export function App() {
   const { data, isLoading, error, refetch } = usePrompt(activePromptId);
   const createMutation = useCreatePrompt();
   const reQueryMutation = useReQueryPrompt();
+  const chat = useChatStream();
 
-  // Derived: no synchronised state
+  // Derived
   const isSubmitting = createMutation.isPending || reQueryMutation.isPending;
   const records = data?.data.records ?? [];
   const promptText = data?.data.text ?? null;
-  const hasRecords = activePromptId !== null && !isLoading && !error;
+  const promptStatus = data?.data.status ?? null;
+  const hasRecords = activePromptId !== null && !isLoading && !error && records.length > 0;
+  const isChatting = activePromptId !== null && promptStatus === "chatting";
 
   function handleSubmit(text: string) {
     if (activePromptId) {
+      // If the conversation is active, send via chat stream
+      if (isChatting) {
+        chat.sendMessage(activePromptId, text);
+        return;
+      }
+      // Otherwise re-query (replace records)
       reQueryMutation.mutate(
         { publicId: activePromptId, text },
         { onSuccess: (res) => setActivePromptId(res.data.publicId) },
       );
     } else {
+      // First message: create prompt, then send to chat
       createMutation.mutate(text, {
-        onSuccess: (res) => setActivePromptId(res.data.publicId),
+        onSuccess: (res) => {
+          setActivePromptId(res.data.publicId);
+          chat.sendMessage(res.data.publicId, text);
+        },
       });
     }
   }
@@ -43,28 +59,57 @@ export function App() {
         <p className="mt-2 text-sm text-gray-500">{t("app.subtitle")}</p>
       </header>
 
-      <main className="space-y-8">
-        <PromptForm
-          isReQuery={activePromptId !== null}
-          isSubmitting={isSubmitting}
-          promptText={promptText}
-          onSubmit={handleSubmit}
-        />
+      <main className="space-y-6">
+        {/* Initial prompt form: shown when no active conversation */}
+        {!activePromptId && (
+          <PromptForm
+            isReQuery={false}
+            isSubmitting={isSubmitting}
+            promptText={null}
+            onSubmit={handleSubmit}
+          />
+        )}
 
         {isLoading && <RecordSkeleton />}
         {error && <ErrorBanner error={error} onRetry={() => refetch()} />}
 
-        {/* Activity preserves RecordList state (inline edits, scroll position)
-            during background refetches that briefly set isLoading=true */}
+        {/* Chat thread: shows conversation history */}
+        {activePromptId && chat.messages.length > 0 && (
+          <ChatThread
+            messages={chat.messages}
+            isStreaming={chat.isStreaming}
+            toolStatus={chat.toolStatus}
+          />
+        )}
+
+        {/* Chat input: shown during active conversation */}
+        {isChatting && (
+          <ChatInput
+            onSend={(msg) => chat.sendMessage(activePromptId, msg)}
+            disabled={chat.isStreaming}
+          />
+        )}
+
+        {/* Records appear when the conversation completes */}
         <Activity mode={hasRecords ? "visible" : "hidden"}>
           {activePromptId && (
             <RecordList
               promptPublicId={activePromptId}
               records={records}
-              disabled={isSubmitting}
+              disabled={isSubmitting || chat.isStreaming}
             />
           )}
         </Activity>
+
+        {/* Re-query form: shown after records are produced */}
+        {activePromptId && promptStatus === "complete" && (
+          <PromptForm
+            isReQuery={true}
+            isSubmitting={isSubmitting}
+            promptText={promptText}
+            onSubmit={handleSubmit}
+          />
+        )}
       </main>
     </div>
   );

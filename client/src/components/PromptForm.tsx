@@ -1,53 +1,32 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCreatePrompt, usePrompt, useReQueryPrompt } from "../hooks/usePrompts.js";
 
 interface PromptFormProps {
-  activePromptId: string | null;
-  onPromptCreated: (publicId: string) => void;
-  onSubmittingChange: (isSubmitting: boolean) => void;
+  isReQuery: boolean;
+  isSubmitting: boolean;
+  promptText: string | null;
+  onSubmit: (text: string) => void;
 }
 
-export function PromptForm({ activePromptId, onPromptCreated, onSubmittingChange }: PromptFormProps) {
+export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: PromptFormProps) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
 
-  const { data: promptData } = usePrompt(activePromptId);
-  const createMutation = useCreatePrompt();
-  const reQueryMutation = useReQueryPrompt();
-
-  const isLoading = createMutation.isPending || reQueryMutation.isPending;
-  const isReQuery = activePromptId !== null;
-
-  // Notify parent when submission state changes so it can disable record actions
-  useEffect(() => {
-    onSubmittingChange(isLoading);
-  }, [isLoading, onSubmittingChange]);
-
-  // Sync text with active prompt when it loads
-  const promptText = promptData?.data.text;
-  const [lastSyncedId, setLastSyncedId] = useState<string | null>(null);
-  if (activePromptId && activePromptId !== lastSyncedId && promptText) {
+  // Sync text when the prompt loads after creation/re-query.
+  // Derived from props during render, no useEffect needed.
+  const [lastSyncedText, setLastSyncedText] = useState<string | null>(null);
+  if (promptText !== null && promptText !== lastSyncedText) {
     setText(promptText);
-    setLastSyncedId(activePromptId);
+    setLastSyncedText(promptText);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     const trimmed = text.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isSubmitting) return;
 
-    if (isReQuery && activePromptId) {
-      reQueryMutation.mutate(
-        { publicId: activePromptId, text: trimmed },
-        { onSuccess: (data) => onPromptCreated(data.data.publicId) },
-      );
-    } else {
-      createMutation.mutate(trimmed, {
-        onSuccess: (data) => onPromptCreated(data.data.publicId),
-      });
-    }
+    onSubmit(trimmed);
   }
 
   return (
@@ -60,7 +39,7 @@ export function PromptForm({ activePromptId, onPromptCreated, onSubmittingChange
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={t("prompt.placeholder")}
-        disabled={isLoading}
+        disabled={isSubmitting}
         rows={4}
         maxLength={5000}
         className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
@@ -71,10 +50,10 @@ export function PromptForm({ activePromptId, onPromptCreated, onSubmittingChange
         </span>
         <button
           type="submit"
-          disabled={isLoading || text.trim().length === 0}
+          disabled={isSubmitting || text.trim().length === 0}
           className="inline-flex items-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? (
+          {isSubmitting ? (
             <>
               <svg
                 className="-ml-1 mr-2 h-4 w-4 animate-spin"

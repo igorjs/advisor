@@ -1,20 +1,21 @@
-import { Activity, useState } from "react";
+import { Activity } from "react";
 import { useTranslation } from "react-i18next";
 import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PromptForm } from "./components/PromptForm.js";
 import { RecordList } from "./components/RecordList.js";
 import { RecordSkeleton } from "./components/RecordSkeleton.js";
+import { usePromptId } from "./hooks/usePromptId.js";
 import { useCreatePrompt, usePrompt, useReQueryPrompt } from "./hooks/usePrompts.js";
 
 export function App() {
   const { t } = useTranslation();
-  const [activePromptId, setActivePromptId] = useState<string | null>(null);
+  const [activePromptId, setActivePromptId] = usePromptId();
 
   const { data, isLoading, error, refetch } = usePrompt(activePromptId);
   const createMutation = useCreatePrompt();
   const reQueryMutation = useReQueryPrompt();
 
-  // Derived: no useEffect, no synchronised state
+  // Derived: no synchronised state
   const isSubmitting = createMutation.isPending || reQueryMutation.isPending;
   const records = data?.data.records ?? [];
   const promptText = data?.data.text ?? null;

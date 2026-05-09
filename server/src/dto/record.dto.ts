@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import type { InferSelectModel } from "drizzle-orm";
 import type { records } from "../db/schema.js";
 

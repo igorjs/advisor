@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import type { MiddlewareHandler } from "hono";
 import type { AppContext } from "../lib/types.js";
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { eq, lt } from "drizzle-orm";
 import type { MiddlewareHandler } from "hono";
 import { IDEMPOTENCY_TTL_MS } from "../config/idempotency.js";

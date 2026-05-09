@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 /** Parse response JSON for test assertions. Caller narrows the type. */
 export async function jsonBody<T>(res: Response): Promise<T> {
   const raw: unknown = await res.json();

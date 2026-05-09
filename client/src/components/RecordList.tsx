@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { useCallback, useRef, useState } from "react";
 import { useDeleteRecord, useUpdateRecord } from "../hooks/useRecords.js";
 import { useHotkey } from "../hooks/useHotkey.js";

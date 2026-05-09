@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import type { ErrorResponse } from "../types/api.js";
 
 export class ApiRequestError extends Error {

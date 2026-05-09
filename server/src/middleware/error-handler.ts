@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import type { ErrorHandler } from "hono";
 import { DomainException } from "../lib/errors.js";
 import { errorStatus } from "../lib/http.js";

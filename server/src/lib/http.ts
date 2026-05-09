@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 /**
  * HTTP response helpers that bridge Result<T, DomainError> to Hono responses.
  * Routes stay thin: validate input, call service, pass Result to matchResult().

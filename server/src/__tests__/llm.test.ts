@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 import { describe, expect, it } from "vitest";
 import { Err, Ok } from "../lib/result.js";
 import type { LlmService } from "../services/llm.service.js";

@@ -1,6 +1,7 @@
 {
   "name": "advisor",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "dev": "pnpm --parallel -r run dev",

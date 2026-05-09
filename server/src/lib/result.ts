@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 igorjs
+
 /**
  * Lightweight Result and Option types inspired by pure-fx.
  * Errors are values, not exceptions.

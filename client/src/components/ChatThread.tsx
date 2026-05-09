@@ -25,7 +25,6 @@ export function ChatThread({ messages, isStreaming }: ChatThreadProps) {
 
   return (
     <div className="space-y-4">
-      {/* Greeting: always the first message in the thread */}
       <ChatMessage message={{ role: "assistant", content: t("chat.greeting") }} />
 
       {messages.map((msg, i) => (

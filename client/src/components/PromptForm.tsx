@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHotkey } from "../hooks/useHotkey.js";
+import { Kbd, modKey } from "./Kbd.js";
 
 interface PromptFormProps {
   isReQuery: boolean;
@@ -11,6 +13,7 @@ interface PromptFormProps {
 export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: PromptFormProps) {
   const { t } = useTranslation();
   const [text, setText] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync text when the prompt loads after creation/re-query.
   // Derived from props during render, no useEffect needed.
@@ -20,21 +23,40 @@ export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: Pr
     setLastSyncedText(promptText);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
+  function doSubmit() {
     const trimmed = text.trim();
     if (!trimmed || isSubmitting) return;
-
     onSubmit(trimmed);
+  }
+
+  // Global: "/" focuses the prompt textarea
+  useHotkey({
+    key: "/",
+    onPress: () => textareaRef.current?.focus(),
+    enabled: !isSubmitting,
+  });
+
+  // Ctrl+Enter submits from anywhere
+  useHotkey({
+    key: "Enter",
+    ctrl: true,
+    onPress: doSubmit,
+    enabled: !isSubmitting && text.trim().length > 0,
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    doSubmit();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <label htmlFor="prompt-input" className="block text-sm font-medium text-gray-700">
         {t("prompt.label")}
+        <Kbd>/</Kbd>
       </label>
       <textarea
+        ref={textareaRef}
         id="prompt-input"
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -77,10 +99,11 @@ export function PromptForm({ isReQuery, isSubmitting, promptText, onSubmit }: Pr
               </svg>
               {t("prompt.loading")}
             </>
-          ) : isReQuery ? (
-            t("prompt.requery")
           ) : (
-            t("prompt.submit")
+            <>
+              {isReQuery ? t("prompt.requery") : t("prompt.submit")}
+              <Kbd>{`${modKey}+↵`}</Kbd>
+            </>
           )}
         </button>
       </div>

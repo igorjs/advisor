@@ -6,9 +6,10 @@ import { ChatMessage } from "./ChatMessage.js";
 interface ChatThreadProps {
   messages: ChatMessageType[];
   isStreaming: boolean;
+  onEditMessage?: (index: number, newContent: string) => void;
 }
 
-export function ChatThread({ messages, isStreaming }: ChatThreadProps) {
+export function ChatThread({ messages, isStreaming, onEditMessage }: ChatThreadProps) {
   const { t } = useTranslation();
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -28,7 +29,16 @@ export function ChatThread({ messages, isStreaming }: ChatThreadProps) {
       <ChatMessage message={{ role: "assistant", content: t("chat.greeting") }} />
 
       {messages.map((msg, i) => (
-        <ChatMessage key={i} message={msg} />
+        <ChatMessage
+          key={i}
+          message={msg}
+          onEdit={
+            // Only user messages can be edited, and not while streaming
+            msg.role === "user" && onEditMessage && !isStreaming
+              ? (newContent) => onEditMessage(i, newContent)
+              : undefined
+          }
+        />
       ))}
 
       {isStreaming && (

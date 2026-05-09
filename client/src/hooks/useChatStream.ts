@@ -9,6 +9,7 @@ interface UseChatStreamResult {
   isStreaming: boolean;
   toolStatus: string | null;
   sendMessage: (conversationPublicId: string, message: string) => void;
+  editMessage: (conversationPublicId: string, messageIndex: number, newContent: string) => void;
 }
 
 /**
@@ -150,5 +151,24 @@ export function useChatStream(): UseChatStreamResult {
     [queryClient, t],
   );
 
-  return { messages, isStreaming, toolStatus, sendMessage };
+  // Edit a previous message: truncate local state from that point,
+  // update the message content, and re-send. The server-side edit
+  // endpoint handles truncation and version bumping.
+  const editMessage = useCallback(
+    (conversationPublicId: string, messageIndex: number, newContent: string) => {
+      // Truncate local messages: keep everything up to and including
+      // the edited message, replace its content
+      setMessages((prev) => {
+        const truncated = prev.slice(0, messageIndex);
+        return [...truncated, { role: "user" as const, content: newContent }];
+      });
+
+      // Send the edited content as a new message. The server re-runs
+      // the agentic loop with the truncated context.
+      sendMessage(conversationPublicId, newContent);
+    },
+    [sendMessage],
+  );
+
+  return { messages, isStreaming, toolStatus, sendMessage, editMessage };
 }

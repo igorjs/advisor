@@ -8,7 +8,7 @@ import { RecordList } from "./components/RecordList.js";
 import { RecordSkeleton } from "./components/RecordSkeleton.js";
 import { useChatStream } from "./hooks/useChatStream.js";
 import { useConversationId } from "./hooks/useConversationId.js";
-import { useConversation, useCreateConversation, useReQueryConversation } from "./hooks/useConversations.js";
+import { useConversation, useCreateConversation } from "./hooks/useConversations.js";
 
 export function App() {
   const { t } = useTranslation();
@@ -16,26 +16,15 @@ export function App() {
 
   const { data, isLoading, error, refetch } = useConversation(activeConversationId);
   const createMutation = useCreateConversation();
-  const reQueryMutation = useReQueryConversation();
   const chat = useChatStream();
 
   // Derived
-  const isSubmitting = createMutation.isPending || reQueryMutation.isPending;
   const records = data?.data.records ?? [];
-  const conversationTitle = data?.data.title ?? null;
   const hasRecords = activeConversationId !== null && !isLoading && !error && records.length > 0;
-  const isChatting = activeConversationId !== null && !hasRecords;
 
   function handleSubmit(text: string) {
     if (activeConversationId) {
-      if (isChatting) {
-        chat.sendMessage(activeConversationId, text);
-        return;
-      }
-      reQueryMutation.mutate(
-        { publicId: activeConversationId, text },
-        { onSuccess: (res) => setActiveConversationId(res.data.publicId) },
-      );
+      chat.sendMessage(activeConversationId, text);
     } else {
       createMutation.mutate(text, {
         onSuccess: (res) => {
@@ -59,7 +48,7 @@ export function App() {
         <div className="w-full max-w-2xl">
           <PromptForm
             isReQuery={false}
-            isSubmitting={isSubmitting}
+            isSubmitting={createMutation.isPending}
             conversationTitle={null}
             onSubmit={handleSubmit}
           />
@@ -99,24 +88,18 @@ export function App() {
             <ChatThread
               messages={chat.messages}
               isStreaming={chat.isStreaming}
+              onEditMessage={(index, newContent) =>
+                chat.editMessage(activeConversationId, index, newContent)
+              }
             />
           </div>
 
-          {/* Chat input pinned to bottom of chat column */}
+          {/* Chat input always at bottom: continue conversation or refine */}
           <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
-            {isChatting ? (
-              <ChatInput
-                onSend={(msg) => chat.sendMessage(activeConversationId, msg)}
-                disabled={chat.isStreaming}
-              />
-            ) : hasRecords ? (
-              <PromptForm
-                isReQuery={true}
-                isSubmitting={isSubmitting}
-                conversationTitle={conversationTitle}
-                onSubmit={handleSubmit}
-              />
-            ) : null}
+            <ChatInput
+              onSend={(msg) => chat.sendMessage(activeConversationId, msg)}
+              disabled={chat.isStreaming}
+            />
           </div>
         </div>
 
@@ -131,7 +114,7 @@ export function App() {
             <RecordList
               conversationPublicId={activeConversationId}
               records={records}
-              disabled={isSubmitting || chat.isStreaming}
+              disabled={chat.isStreaming}
             />
           </div>
         </Activity>

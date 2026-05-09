@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, messages, records } from "../db/schema.js";
 import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
@@ -67,6 +67,17 @@ export interface AgentService {
   processMessage(
     conversationPublicId: string,
     userMessage: string,
+  ): AsyncGenerator<AgentEvent>;
+
+  /**
+   * Edit a previous user message. Truncates all messages after the edited
+   * message, bumps the conversation version, and re-runs the agentic loop
+   * from the edited message. Existing records become stale (older version).
+   */
+  editMessage(
+    conversationPublicId: string,
+    messagePublicId: string,
+    newContent: string,
   ): AsyncGenerator<AgentEvent>;
 }
 
@@ -296,6 +307,243 @@ export function createAgentService(
       }
 
       // Exhausted tool rounds without a final response
+      yield {
+        type: "error",
+        code: "LLM_ERROR",
+        message: "Too many tool calls without a final response.",
+      };
+      yield { type: "done" };
+    },
+
+    async *editMessage(conversationPublicId, messagePublicId, newContent) {
+      // Resolve conversation
+      const conversation = await db
+        .select()
+        .from(conversations)
+        .where(
+          and(eq(conversations.publicId, conversationPublicId), isNull(conversations.deletedAt)),
+        )
+        .get();
+
+      if (!conversation) {
+        yield { type: "error", code: "NOT_FOUND", message: "Conversation not found." };
+        yield { type: "done" };
+        return;
+      }
+
+      // Find the message being edited
+      const targetMessage = await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.conversationId, conversation.id),
+            eq(messages.publicId, messagePublicId),
+          ),
+        )
+        .get();
+
+      if (!targetMessage) {
+        yield { type: "error", code: "NOT_FOUND", message: "Message not found." };
+        yield { type: "done" };
+        return;
+      }
+
+      // Truncate: delete all messages after the edited message
+      await db
+        .delete(messages)
+        .where(
+          and(
+            eq(messages.conversationId, conversation.id),
+            gt(messages.id, targetMessage.id),
+          ),
+        )
+        .run();
+
+      // Update the edited message content
+      await db
+        .update(messages)
+        .set({ content: newContent })
+        .where(eq(messages.id, targetMessage.id))
+        .run();
+
+      // Bump version on conversation so new records are distinguishable
+      const currentVersion = targetMessage.version;
+      const newVersion = currentVersion + 1;
+      await db
+        .update(conversations)
+        .set({ updatedAt: sql`(datetime('now'))` })
+        .where(eq(conversations.id, conversation.id))
+        .run();
+
+      // Load truncated history and run the agentic loop from here.
+      // Reuse processMessage logic by yielding from it, but without
+      // re-inserting the user message (it's already edited in place).
+      const history = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.conversationId, conversation.id))
+        .all();
+
+      const llmMessages: OpenAI.ChatCompletionMessageParam[] = [
+        { role: "system", content: buildSystemPrompt() },
+        ...history.map((msg) => {
+          if (msg.role === "tool") {
+            return {
+              role: "tool" as const,
+              content: msg.content,
+              tool_call_id: msg.toolCallId ?? "",
+            };
+          }
+          if (msg.role === "assistant" && msg.toolCalls) {
+            return {
+              role: "assistant" as const,
+              content: msg.content,
+              tool_calls: JSON.parse(msg.toolCalls),
+            };
+          }
+          return {
+            role: msg.role as "user" | "assistant",
+            content: msg.content,
+          };
+        }),
+      ];
+
+      // Run the same agentic loop
+      for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+        let completion: OpenAI.ChatCompletion;
+
+        try {
+          completion = await client.chat.completions.create({
+            model: llmConfig.model,
+            messages: llmMessages,
+            tools: [WEB_SEARCH_TOOL],
+          });
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "LLM call failed.";
+          yield { type: "error", code: "LLM_ERROR", message };
+          yield { type: "done" };
+          return;
+        }
+
+        const choice = completion.choices[0];
+        if (!choice) {
+          yield { type: "error", code: "LLM_ERROR", message: "Empty LLM response." };
+          yield { type: "done" };
+          return;
+        }
+
+        const assistantMessage = choice.message;
+
+        if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+          await db
+            .insert(messages)
+            .values({
+              conversationId: conversation.id,
+              role: "assistant",
+              content: assistantMessage.content ?? "",
+              toolCalls: JSON.stringify(assistantMessage.tool_calls),
+              version: newVersion,
+            })
+            .run();
+
+          llmMessages.push({
+            role: "assistant",
+            content: assistantMessage.content ?? "",
+            tool_calls: assistantMessage.tool_calls,
+          });
+
+          for (const toolCall of assistantMessage.tool_calls) {
+            if (toolCall.type !== "function") continue;
+            if (toolCall.function.name !== "web_search") continue;
+
+            const args = JSON.parse(toolCall.function.arguments) as {
+              query: string;
+              site?: string;
+            };
+
+            yield {
+              type: "tool_start",
+              name: "web_search",
+              query: args.site ? `${args.query} (${args.site})` : args.query,
+            };
+
+            const searchResult = await search.search(args.query, args.site ?? null);
+
+            const resultContent = searchResult.ok
+              ? JSON.stringify(searchResult.value)
+              : JSON.stringify({ error: searchResult.error.message });
+
+            yield { type: "tool_result", results: searchResult.ok ? searchResult.value.length : 0 };
+
+            await db
+              .insert(messages)
+              .values({
+                conversationId: conversation.id,
+                role: "tool",
+                content: resultContent,
+                toolCallId: toolCall.id,
+                version: newVersion,
+              })
+              .run();
+
+            llmMessages.push({
+              role: "tool",
+              content: resultContent,
+              tool_call_id: toolCall.id,
+            });
+          }
+          continue;
+        }
+
+        const content = assistantMessage.content ?? "";
+        const parsed = extractRecords(content);
+
+        if (parsed) {
+          await db
+            .insert(messages)
+            .values({ conversationId: conversation.id, role: "assistant", content, version: newVersion })
+            .run();
+
+          // Insert new records with bumped version (old records stay as stale)
+          const insertedRecords: RecordResponse[] = [];
+          for (const record of parsed.records) {
+            const row = await db
+              .insert(records)
+              .values({
+                conversationId: conversation.id,
+                title: record.title,
+                description: record.description,
+                version: newVersion,
+              })
+              .returning()
+              .get();
+            insertedRecords.push(toRecordResponse(row!));
+          }
+
+          await db
+            .update(conversations)
+            .set({ updatedAt: sql`(datetime('now'))` })
+            .where(eq(conversations.id, conversation.id))
+            .run();
+
+          yield { type: "records", records: insertedRecords };
+          yield { type: "done" };
+          return;
+        }
+
+        await db
+          .insert(messages)
+          .values({ conversationId: conversation.id, role: "assistant", content, version: newVersion })
+          .run();
+
+        yield { type: "assistant_delta", content };
+        yield { type: "assistant_end", fullContent: content };
+        yield { type: "done" };
+        return;
+      }
+
       yield {
         type: "error",
         code: "LLM_ERROR",

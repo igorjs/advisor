@@ -21,7 +21,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
             AI
           </div>
-          <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-800">
+          <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-800">
             {message.content}
           </div>
         </div>

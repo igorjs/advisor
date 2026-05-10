@@ -57,7 +57,8 @@ export function useChatStream(): UseChatStreamResult {
         );
 
         if (!response.ok || !response.body) {
-          toast.error(t("errors.generic"));
+          const errorKey = response.status === 429 ? "errors.rateLimited" : "errors.generic";
+          toast.error(t(errorKey));
           setIsStreaming(false);
           return;
         }

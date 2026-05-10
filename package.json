@@ -7,6 +7,7 @@
     "dev": "pnpm --parallel -r run dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
+    "test:e2e": "playwright test",
     "test:watch": "pnpm --filter server run test:watch",
     "db:generate": "pnpm --filter server run db:generate",
     "db:migrate": "pnpm --filter server run db:migrate"
@@ -15,5 +16,8 @@
     "node": ">=26.0.0",
     "pnpm": ">=11.0.0"
   },
-  "packageManager": "pnpm@11.0.9"
+  "packageManager": "pnpm@11.0.9",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
 }

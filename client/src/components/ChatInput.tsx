@@ -57,7 +57,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); doSubmit(); }} className="flex items-end gap-2">
+    <form onSubmit={(e) => { e.preventDefault(); doSubmit(); }} className="flex items-start gap-2">
       <div className="relative flex-1">
         <textarea
           ref={mountRef}
@@ -78,7 +78,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
       <button
         type="submit"
         disabled={disabled || text.trim().length === 0}
-        className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-[42px] shrink-0 items-center gap-1 rounded-xl bg-primary-600 px-4 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {t("chat.send")}
         <Kbd>{`${modKey}+↵`}</Kbd>

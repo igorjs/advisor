@@ -334,6 +334,8 @@ export function createAgentService(
             .where(eq(conversations.id, conversation.id))
             .run();
 
+          // Notify chat thread so the sentinel appears as a bubble
+          yield { type: "assistant_end", fullContent: summary };
           yield { type: "records", records: insertedRecords };
           yield { type: "done" };
           return;
@@ -577,6 +579,7 @@ export function createAgentService(
             .where(eq(conversations.id, conversation.id))
             .run();
 
+          yield { type: "assistant_end", fullContent: summary };
           yield { type: "records", records: insertedRecords };
           yield { type: "done" };
           return;

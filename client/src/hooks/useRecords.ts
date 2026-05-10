@@ -3,8 +3,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { deleteRecord, updateRecord } from "../api/records.js";
+import { showErrorToast } from "../lib/error-toast.js";
 import type { ConversationResponse, DataResponse } from "../types/api.js";
 
 // No useRecords query hook: records come from the conversation query
@@ -51,7 +51,7 @@ export function useUpdateRecord(conversationPublicId: string) {
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }
-      toast.error(t("errors.generic"));
+      showErrorToast(_err, t);
     },
 
     onSettled: () => {
@@ -94,7 +94,7 @@ export function useDeleteRecord(conversationPublicId: string) {
       if (context?.previous) {
         queryClient.setQueryData(queryKey, context.previous);
       }
-      toast.error(t("errors.generic"));
+      showErrorToast(_err, t);
     },
 
     onSettled: () => {

@@ -3,8 +3,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
 import { createConversation, getConversation } from "../api/conversations.js";
+import { showErrorToast } from "../lib/error-toast.js";
 
 export function useConversation(publicId: string | null) {
   return useQuery({
@@ -23,8 +23,8 @@ export function useCreateConversation() {
     onSuccess: (data) => {
       queryClient.setQueryData(["conversations", data.data.publicId], data);
     },
-    onError: () => {
-      toast.error(t("errors.generic"));
+    onError: (error) => {
+      showErrorToast(error, t);
     },
   });
 }

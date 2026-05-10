@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { showHttpErrorToast } from "../lib/error-toast.js";
 import type { AgentEvent, ChatMessage } from "../types/api.js";
 
 interface UseChatStreamResult {
@@ -57,8 +58,7 @@ export function useChatStream(): UseChatStreamResult {
         );
 
         if (!response.ok || !response.body) {
-          const errorKey = response.status === 429 ? "errors.rateLimited" : "errors.generic";
-          toast.error(t(errorKey));
+          showHttpErrorToast(response.status, t);
           setIsStreaming(false);
           return;
         }
@@ -137,7 +137,7 @@ export function useChatStream(): UseChatStreamResult {
               break;
 
             case "error":
-              toast.error(event.message);
+              toast.error(event.message, { duration: Infinity });
               break;
 
             case "done":
@@ -146,7 +146,7 @@ export function useChatStream(): UseChatStreamResult {
         }
       } catch (error) {
         if (error instanceof Error && error.name !== "AbortError") {
-          toast.error(t("errors.generic"));
+          toast.error(t("errors.generic"), { duration: Infinity });
         }
       } finally {
         setIsStreaming(false);

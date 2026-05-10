@@ -91,17 +91,18 @@ test.describe("Conversation Flow", () => {
     await waitForAIReply(page);
     const chatInput = await waitForInputReady(page);
 
-    // Send follow-up via button click (more reliable than keyboard shortcut)
+    // Capture bubble count BEFORE sending follow-up
+    const countBefore = await assistantBubbles(page).count();
+
     await chatInput.fill("They are both salaried employees.");
     await page.getByRole("button", { name: /Send/i }).click();
 
     await expect(page.getByText("They are both salaried employees.")).toBeVisible({ timeout: 10_000 });
 
-    // Wait for a second AI response
-    const initialCount = await assistantBubbles(page).count();
+    // Wait for the AI to respond to the follow-up
     await expect(async () => {
-      const newCount = await assistantBubbles(page).count();
-      expect(newCount).toBeGreaterThan(initialCount);
+      const countAfter = await assistantBubbles(page).count();
+      expect(countAfter).toBeGreaterThan(countBefore);
     }).toPass({ timeout: 90_000 });
   });
 });

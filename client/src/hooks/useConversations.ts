@@ -4,7 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { createConversation, getConversation, reQueryConversation } from "../api/conversations.js";
+import { createConversation, getConversation } from "../api/conversations.js";
 
 export function useConversation(publicId: string | null) {
   return useQuery({
@@ -22,24 +22,6 @@ export function useCreateConversation() {
     mutationFn: (text: string) => createConversation(text),
     onSuccess: (data) => {
       queryClient.setQueryData(["conversations", data.data.publicId], data);
-      toast.success(t("toast.promptCreated"));
-    },
-    onError: () => {
-      toast.error(t("errors.generic"));
-    },
-  });
-}
-
-export function useReQueryConversation() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ publicId, text }: { publicId: string; text: string }) =>
-      reQueryConversation(publicId, text),
-    onSuccess: (data) => {
-      queryClient.setQueryData(["conversations", data.data.publicId], data);
-      toast.success(t("toast.promptRequeried"));
     },
     onError: () => {
       toast.error(t("errors.generic"));

@@ -2,7 +2,11 @@
 // Copyright (c) 2026 igorjs
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ChatMessage as ChatMessageType } from "../types/api.js";
+
+// Deterministic sentinel from the server: [records:N]
+const RECORDS_SENTINEL = /^\[records:(\d+)]$/;
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -10,6 +14,7 @@ interface ChatMessageProps {
 }
 
 export function ChatMessage({ message, onEdit }: ChatMessageProps) {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.content);
 
@@ -84,17 +89,23 @@ export function ChatMessage({ message, onEdit }: ChatMessageProps) {
         </div>
       );
 
-    case "assistant":
+    case "assistant": {
+      const sentinelMatch = RECORDS_SENTINEL.exec(message.content);
+      const displayContent = sentinelMatch
+        ? t("chat.recordsGenerated", { count: Number(sentinelMatch[1]) })
+        : message.content;
+
       return (
         <div className="flex items-start gap-2.5">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
             AI
           </div>
           <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3 text-sm leading-relaxed text-gray-800">
-            {message.content}
+            {displayContent}
           </div>
         </div>
       );
+    }
 
     case "tool":
       return (

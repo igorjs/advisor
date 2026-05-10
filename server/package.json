@@ -4,6 +4,7 @@
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
+    "predev": "lsof -ti :3001 | xargs kill -9 2>/dev/null || true",
     "dev": "tsx watch --env-file=../.env src/index.ts",
     "build": "tsc",
     "test": "vitest run",

@@ -58,9 +58,6 @@ export function useUpdateRecord(conversationPublicId: string) {
       queryClient.invalidateQueries({ queryKey });
     },
 
-    onSuccess: () => {
-      toast.success(t("toast.recordUpdated"));
-    },
   });
 }
 
@@ -104,8 +101,5 @@ export function useDeleteRecord(conversationPublicId: string) {
       queryClient.invalidateQueries({ queryKey });
     },
 
-    onSuccess: () => {
-      toast.success(t("toast.recordDeleted"));
-    },
   });
 }

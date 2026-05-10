@@ -161,15 +161,9 @@ export function useChatStream(): UseChatStreamResult {
   // endpoint handles truncation and version bumping.
   const editMessage = useCallback(
     (conversationPublicId: string, messageIndex: number, newContent: string) => {
-      // Truncate local messages: keep everything up to and including
-      // the edited message, replace its content
-      setMessages((prev) => {
-        const truncated = prev.slice(0, messageIndex);
-        return [...truncated, { role: "user" as const, content: newContent }];
-      });
-
-      // Send the edited content as a new message. The server re-runs
-      // the agentic loop with the truncated context.
+      // Truncate messages before the edit point. sendMessage will
+      // append the edited user message and start the SSE stream.
+      setMessages((prev) => prev.slice(0, messageIndex));
       sendMessage(conversationPublicId, newContent);
     },
     [sendMessage],

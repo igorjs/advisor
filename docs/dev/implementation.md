@@ -90,12 +90,14 @@ advisor/
 ### Phase 1: Foundation
 
 **1.1 Project scaffolding**
+
 - Root `package.json` with pnpm workspace scripts
 - `pnpm-workspace.yaml` declaring client/ and server/
 - `.gitignore` (node_modules, dist, .env, *.sqlite, .local/)
 - `.env.example` (OPENAI_API_KEY, PORT, DATABASE_URL)
 
 **1.2 Server package + database layer**
+
 - `server/package.json` with dependencies
 - `server/tsconfig.json` (strict mode)
 - `src/env.ts`: zod env schema, fail-fast validation
@@ -104,6 +106,7 @@ advisor/
 - `drizzle.config.ts` + generate initial migration
 
 **1.3 Result/Option library**
+
 - `src/lib/result.ts`: lightweight Result<T,E>, Option<T>, tryCatch
 - Inspired by pure-fx but minimal (no monadic chains, just the core pattern)
 - Tests first (RED/GREEN)
@@ -111,12 +114,14 @@ advisor/
 ### Phase 2: Server
 
 **2.1 Types, DTOs, and middleware**
+
 - `src/lib/types.ts`: AppContext, domain error types
 - `src/dto/prompt.dto.ts` + `src/dto/record.dto.ts`
 - All 7 middleware files
 - Tests for error handler and rate limiter
 
 **2.2 Services**
+
 - `src/services/llm.service.ts`: OpenAI + zodResponseFormat + 30s timeout
 - `src/services/prompt.service.ts`: CRUD + re-query (transaction)
 - `src/services/record.service.ts`: CRUD (soft delete filter)
@@ -124,6 +129,7 @@ advisor/
 - Tests first (mocked OpenAI for LLM, in-memory SQLite for CRUD)
 
 **2.3 Routes + app assembly**
+
 - `src/routes/health.ts`, `prompts.ts`, `records.ts`
 - `src/app.ts`: middleware chain assembly
 - `src/index.ts`: entry point + graceful shutdown
@@ -132,14 +138,17 @@ advisor/
 ### Phase 3: Client
 
 **3.1 Client foundation**
+
 - Package setup, Vite + Tailwind + PostCSS config
 - i18n setup, providers, entry point
 
 **3.2 API layer + hooks**
+
 - Types, fetch wrapper, API functions
 - react-query hooks with optimistic updates
 
 **3.3 Components**
+
 - Build bottom-up: EmptyState, ErrorBanner, RecordSkeleton first
 - Then RecordCard (inline editing), RecordList, PromptForm
 - Finally App.tsx composition
@@ -147,10 +156,12 @@ advisor/
 ### Phase 4: Polish
 
 **4.1 Testing + final verification**
+
 - Ensure all tests pass
 - Verify full stack: `pnpm install && pnpm dev`
 
 **4.2 README**
+
 - How to run the project
 - Point to docs/dev/ for design decisions
 
@@ -181,41 +192,46 @@ No try/catch in routes. Errors flow as typed values through the system.
 ## Testing Approach
 
 ### RED/GREEN TDD cycle
+
 1. Write a failing test describing expected behaviour
 2. Implement the minimum code to make it pass
 3. Refactor if needed
 
 ### BDD style
+
 Tests describe behaviour from the consumer's perspective:
+
 ```typescript
-describe('POST /api/v1/prompts', () => {
-  it('creates a prompt and returns structured records', async () => {
+describe("POST /api/v1/prompts", () => {
+  it("creates a prompt and returns structured records", async () => {
     // Arrange
-    const body = { text: 'Give me tax advice' }
+    const body = { text: "Give me tax advice" };
 
     // Act
-    const res = await app.request('/api/v1/prompts', {
-      method: 'POST',
+    const res = await app.request("/api/v1/prompts", {
+      method: "POST",
       body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' },
-    })
+      headers: { "Content-Type": "application/json" },
+    });
 
     // Assert
-    expect(res.status).toBe(201)
-    const json = await res.json()
-    expect(json.data).toHaveProperty('publicId')
-    expect(json.data.records).toBeInstanceOf(Array)
-  })
-})
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.data).toHaveProperty("publicId");
+    expect(json.data.records).toBeInstanceOf(Array);
+  });
+});
 ```
 
 ### What we test
+
 - HTTP status codes and response shapes
 - API contracts (required fields, types)
 - Error responses for invalid input
 - Business rules (re-query deletes old records)
 
 ### What we don't test
+
 - Internal function signatures
 - Database row structures
 - Middleware ordering

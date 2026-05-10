@@ -6,19 +6,19 @@ Full-stack LLM advisor application. Users submit prompts, receive structured adv
 
 ## Technology Choices
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Package manager | pnpm workspaces | Built-in orchestration, strict dependency resolution, disk efficient |
-| Backend | Hono | Lightweight, fast, built-in middleware, excellent testing via `app.request()` |
-| ORM | Drizzle | Type-safe queries, libSQL/Turso support, versioned migrations |
-| Database | Turso (libSQL) | SQLite-compatible. Local file mode for development, Turso remote for production. Zero-config locally, production-ready with edge replication when Turso credentials are set. |
-| LLM | OpenAI SDK | Provider-agnostic API shape (compatible with Ollama, Groq, etc.) |
-| Frontend | React + Vite | Standard tooling, fast HMR |
-| Data fetching | @tanstack/react-query | Required by brief. Provides caching, optimistic updates, retry |
-| Styling | Tailwind CSS | Mobile-first, utility classes, design token centralisation |
-| Toasts | sonner | Lightweight (3KB), pairs with future shadcn/ui adoption |
-| i18n | react-i18next | Low setup cost now, painful retrofit later |
-| Testing | Vitest | Same ecosystem as Vite, fast, TypeScript-native |
+| Layer           | Choice                | Why                                                                                                                                                                          |
+| --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package manager | pnpm workspaces       | Built-in orchestration, strict dependency resolution, disk efficient                                                                                                         |
+| Backend         | Hono                  | Lightweight, fast, built-in middleware, excellent testing via `app.request()`                                                                                                |
+| ORM             | Drizzle               | Type-safe queries, libSQL/Turso support, versioned migrations                                                                                                                |
+| Database        | Turso (libSQL)        | SQLite-compatible. Local file mode for development, Turso remote for production. Zero-config locally, production-ready with edge replication when Turso credentials are set. |
+| LLM             | OpenAI SDK            | Provider-agnostic API shape (compatible with Ollama, Groq, etc.)                                                                                                             |
+| Frontend        | React + Vite          | Standard tooling, fast HMR                                                                                                                                                   |
+| Data fetching   | @tanstack/react-query | Required by brief. Provides caching, optimistic updates, retry                                                                                                               |
+| Styling         | Tailwind CSS          | Mobile-first, utility classes, design token centralisation                                                                                                                   |
+| Toasts          | sonner                | Lightweight (3KB), pairs with future shadcn/ui adoption                                                                                                                      |
+| i18n            | react-i18next         | Low setup cost now, painful retrofit later                                                                                                                                   |
+| Testing         | Vitest                | Same ecosystem as Vite, fast, TypeScript-native                                                                                                                              |
 
 ## API Design
 
@@ -54,7 +54,7 @@ Inspired by [pure-fx](https://github.com/igorjs/pure-fx): errors are values, not
 Services return `Result<T, E>` instead of throwing:
 
 ```typescript
-type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
+type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 ```
 
 - `Ok(value)` wraps a successful value
@@ -67,7 +67,7 @@ type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }
 For nullable lookups:
 
 ```typescript
-type Option<T> = { some: true; value: T } | { some: false }
+type Option<T> = { some: true; value: T } | { some: false };
 ```
 
 - `Some(value)` wraps a present value
@@ -98,6 +98,7 @@ idempotency_keys (
 ```
 
 Key decisions:
+
 - **Turso/libSQL**: local file mode (`file:data/advisor.db`) when no Turso credentials are set. When `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are provided, operates as an embedded replica with edge sync. This enables a smooth path to multi-tenant SaaS: each tenant could get their own Turso database, resolved at connection time.
 - **Nullable `user_id`**: future multi-tenant without schema migration
 - **Soft deletes** (`deleted_at`): audit trail for future SaaS. Drizzle query helper enforces the filter globally.
@@ -145,6 +146,7 @@ App
 ## Validation
 
 Zod at every boundary:
+
 - **Env**: fail-fast on startup if OPENAI_API_KEY missing
 - **API input**: request body/params validated in route handlers
 - **LLM response**: structured output via `zodResponseFormat`, `safeParse` on response

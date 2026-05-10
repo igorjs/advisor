@@ -8,9 +8,52 @@ import { conversations, messages, records } from "../db/schema.js";
 import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
 import { LLM_TIMEOUT_MS } from "../config/llm.js";
 import { buildSystemPrompt } from "../config/prompts.js";
-import { extractRecords } from "../lib/extract-records.js";
+import { extractRecords, type ExtractedRecords } from "../lib/extract-records.js";
 import type { SearchService } from "./search.service.js";
 import type { LlmServiceConfig } from "./llm.service.js";
+
+// Heuristic: if the response is substantial and doesn't end with a question,
+// the model likely returned strategies as prose instead of JSON.
+const MIN_STRATEGY_LENGTH = 200;
+
+function looksLikeStrategies(content: string): boolean {
+  const trimmed = content.trim();
+  if (trimmed.length < MIN_STRATEGY_LENGTH) return false;
+  if (trimmed.endsWith("?")) return false;
+  return true;
+}
+
+const EXTRACTION_PROMPT = `Convert the following financial advice into a JSON object.
+Return ONLY valid JSON matching this exact structure, no other text:
+{"records": [{"title": "short strategy name", "description": "2-4 sentence explanation"}]}`;
+
+/**
+ * Fallback: when the model returns strategies as prose instead of JSON,
+ * make a focused second call with response_format to extract records.
+ */
+async function tryExtractViaLlm(
+  client: OpenAI,
+  model: string,
+  content: string,
+): Promise<ExtractedRecords | null> {
+  try {
+    const completion = await client.chat.completions.create(
+      {
+        model,
+        messages: [
+          { role: "system", content: EXTRACTION_PROMPT },
+          { role: "user", content },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { timeout: LLM_TIMEOUT_MS },
+    );
+    const text = completion.choices[0]?.message.content ?? "";
+    return extractRecords(text);
+  } catch {
+    return null;
+  }
+}
 
 // Tool definition exposed to the LLM
 const WEB_SEARCH_TOOL: OpenAI.ChatCompletionTool = {
@@ -247,13 +290,21 @@ export function createAgentService(
         // Models don't always return pure JSON: they may include preamble
         // text or wrap in code fences. We find the first { and last } to
         // extract the JSON object regardless of surrounding text.
-        const parsed = extractRecords(content);
+        // Fallback: if the model returned prose strategies instead of JSON,
+        // make a focused second call to convert to the required format.
+        const parsed = extractRecords(content)
+          ?? (looksLikeStrategies(content) ? await tryExtractViaLlm(client, llmConfig.model, content) : null);
 
-        if (parsed) {
-          // Save assistant message
+        if (parsed && parsed.records.length > 0) {
+          // Save a clean summary instead of the raw prose/JSON. The records
+          // panel shows the full strategies; storing the raw content would
+          // leak markdown or JSON into the chat on page reload.
+          // Deterministic sentinel: the client renders this as a localised
+          // message ("Generated N strategies") rather than displaying raw text.
+          const summary = `[records:${parsed.records.length}]`;
           await db
             .insert(messages)
-            .values({ conversationId: conversation.id, role: "assistant", content })
+            .values({ conversationId: conversation.id, role: "assistant", content: summary })
             .run();
 
           // Delete old records and insert new ones
@@ -492,12 +543,16 @@ export function createAgentService(
         }
 
         const content = assistantMessage.content ?? "";
-        const parsed = extractRecords(content);
+        const parsed = extractRecords(content)
+          ?? (looksLikeStrategies(content) ? await tryExtractViaLlm(client, llmConfig.model, content) : null);
 
-        if (parsed) {
+        if (parsed && parsed.records.length > 0) {
+          // Deterministic sentinel: the client renders this as a localised
+          // message ("Generated N strategies") rather than displaying raw text.
+          const summary = `[records:${parsed.records.length}]`;
           await db
             .insert(messages)
-            .values({ conversationId: conversation.id, role: "assistant", content, version: newVersion })
+            .values({ conversationId: conversation.id, role: "assistant", content: summary, version: newVersion })
             .run();
 
           // Insert new records with bumped version (old records stay as stale)

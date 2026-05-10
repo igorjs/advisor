@@ -27,7 +27,8 @@
     "newChat": "New Chat",
     "greeting": "Describe your client's situation and I'll research the best tax strategies for them.",
     "placeholder": "Ask me anything about tax and finance...",
-    "send": "Send"
+    "send": "Send",
+    "recordsGenerated": "I've prepared {{count}} strategies. You can review and edit them in the panel on the right."
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

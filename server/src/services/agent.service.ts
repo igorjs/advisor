@@ -2,13 +2,13 @@
 // Copyright (c) 2026 igorjs
 
 import OpenAI from "openai";
-import { z } from "zod";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, messages, records } from "../db/schema.js";
 import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
 import { LLM_TIMEOUT_MS } from "../config/llm.js";
 import { buildSystemPrompt } from "../config/prompts.js";
+import { extractRecords } from "../lib/extract-records.js";
 import type { SearchService } from "./search.service.js";
 import type { LlmServiceConfig } from "./llm.service.js";
 
@@ -36,15 +36,6 @@ const WEB_SEARCH_TOOL: OpenAI.ChatCompletionTool = {
     },
   },
 };
-
-const recordsSchema = z.object({
-  records: z.array(
-    z.object({
-      title: z.string(),
-      description: z.string(),
-    }),
-  ),
-});
 
 // Max tool-call loops to prevent infinite cycles
 const MAX_TOOL_ROUNDS = 5;
@@ -557,34 +548,3 @@ export function createAgentService(
   };
 }
 
-/**
- * Extract JSON records from LLM output that may contain preamble text,
- * code fences, or other wrapping. Finds the outermost { } and parses.
- */
-function extractRecords(
-  content: string,
-): z.infer<typeof recordsSchema> | null {
-  // Strip code fences first
-  const stripped = content
-    .replace(/^```(?:json)?\s*\n?/i, "")
-    .replace(/\n?```\s*$/i, "")
-    .trim();
-
-  // Try parsing the whole string first (fast path)
-  try {
-    return recordsSchema.parse(JSON.parse(stripped));
-  } catch {
-    // Fall through to extraction
-  }
-
-  // Find the first { and last } to extract JSON from preamble/postamble
-  const start = stripped.indexOf("{");
-  const end = stripped.lastIndexOf("}");
-  if (start === -1 || end === -1 || end <= start) return null;
-
-  try {
-    return recordsSchema.parse(JSON.parse(stripped.slice(start, end + 1)));
-  } catch {
-    return null;
-  }
-}

@@ -147,7 +147,7 @@ export function App() {
           {/* Chat input pinned at bottom */}
           <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
             <ChatInput
-              onSend={(msg) => chat.sendMessage(conversationId, msg)}
+              onSend={handleSubmit}
               disabled={chat.isStreaming}
             />
           </div>

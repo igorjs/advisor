@@ -2,23 +2,24 @@
 
 ## Overview
 
-Full-stack LLM advisor application. Users submit prompts, receive structured advisory records, and perform CRUD operations on them. The architecture is designed for a future multi-tenant SaaS evolution, though the MVP is single-user.
+Full-stack agentic LLM advisor. Users start a conversation, the AI interviews them about their client's situation (one question at a time), searches the web for current tax rules, and produces structured advisory records. Users can review, edit, and delete records in a side panel.
 
 ## Technology Choices
 
-| Layer           | Choice                | Why                                                                                                                                                                          |
-| --------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Package manager | pnpm workspaces       | Built-in orchestration, strict dependency resolution, disk efficient                                                                                                         |
-| Backend         | Hono                  | Lightweight, fast, built-in middleware, excellent testing via `app.request()`                                                                                                |
-| ORM             | Drizzle               | Type-safe queries, libSQL/Turso support, versioned migrations                                                                                                                |
-| Database        | Turso (libSQL)        | SQLite-compatible. Local file mode for development, Turso remote for production. Zero-config locally, production-ready with edge replication when Turso credentials are set. |
-| LLM             | OpenAI SDK            | Provider-agnostic API shape (compatible with Ollama, Groq, etc.)                                                                                                             |
-| Frontend        | React + Vite          | Standard tooling, fast HMR                                                                                                                                                   |
-| Data fetching   | @tanstack/react-query | Required by brief. Provides caching, optimistic updates, retry                                                                                                               |
-| Styling         | Tailwind CSS          | Mobile-first, utility classes, design token centralisation                                                                                                                   |
-| Toasts          | sonner                | Lightweight (3KB), pairs with future shadcn/ui adoption                                                                                                                      |
-| i18n            | react-i18next         | Low setup cost now, painful retrofit later                                                                                                                                   |
-| Testing         | Vitest                | Same ecosystem as Vite, fast, TypeScript-native                                                                                                                              |
+| Layer           | Choice                | Why                                                                                          |
+| --------------- | --------------------- | -------------------------------------------------------------------------------------------- |
+| Package manager | pnpm workspaces       | Built-in orchestration, strict dependency resolution, disk efficient                         |
+| Backend         | Hono                  | Lightweight, fast, built-in middleware, excellent testing via `app.request()`                |
+| ORM             | Drizzle               | Type-safe queries, libSQL/Turso support, versioned migrations                                |
+| Database        | Turso (libSQL)        | SQLite-compatible. Local file for dev, Turso remote for production. Zero-config locally.     |
+| LLM             | OpenAI SDK            | Provider-agnostic via `baseURL` (compatible with OpenRouter, Google AI Studio, Ollama, etc.) |
+| Web Search      | Jina Search API       | Full content extraction from search results, used by the agent for research                  |
+| Frontend        | React 19 + Vite 8     | Standard tooling, fast HMR, React 19 Activity component for preserving panel state           |
+| Data fetching   | @tanstack/react-query | Caching, optimistic updates, retry, stale-while-revalidate                                   |
+| Styling         | Tailwind CSS 4        | `@tailwindcss/vite` plugin, `@theme` directive for design tokens, no PostCSS config          |
+| Toasts          | sonner                | Lightweight (3KB), error-only notifications                                                  |
+| i18n            | react-i18next         | Low setup cost now, painful retrofit later                                                   |
+| Testing         | Vitest + Playwright   | Vitest for unit/integration, Playwright for e2e against real server                          |
 
 ## API Design
 
@@ -26,24 +27,35 @@ Full-stack LLM advisor application. Users submit prompts, receive structured adv
 
 ```
 GET    /api/health
-POST   /api/v1/prompts
-GET    /api/v1/prompts/:publicId
-PATCH  /api/v1/prompts/:publicId                          # re-query
-GET    /api/v1/prompts/:publicId/records
-PATCH  /api/v1/prompts/:publicId/records/:recordPublicId
-DELETE /api/v1/prompts/:publicId/records/:recordPublicId
+POST   /api/v1/conversations
+GET    /api/v1/conversations/:id                 # includes records + visible messages
+PATCH  /api/v1/conversations/:id                 # re-query
+POST   /api/v1/conversations/:id/chat            # SSE: send message, agentic loop
+POST   /api/v1/conversations/:id/edit/:messageId # SSE: edit + truncate + re-run
+PATCH  /api/v1/conversations/:id/records/:id
+DELETE /api/v1/conversations/:id/records/:id
 ```
 
-Records are owned by prompts. The nested URL reflects this real relationship.
+Records are owned by conversations. The nested URL reflects this real relationship.
 
 ### Response shapes
 
-Success: `{ data: T, meta?: { total, page, pageSize } }`
+Success: `{ data: T }` where T includes `records[]` and `messages[]` for conversations.
 Error: `{ error: { code: string, message: string, details?: unknown[] } }`
 
-### UUID public IDs
+### SSE Events (chat endpoint)
 
-External APIs expose UUID-style `publicId`, not auto-increment integers. Prevents enumeration attacks and makes future multi-tenant ID isolation straightforward.
+The chat endpoint streams agent events as Server-Sent Events:
+
+| Event             | Payload             | Purpose                        |
+| ----------------- | ------------------- | ------------------------------ |
+| `assistant_delta` | `{ content }`       | Incremental text (streaming)   |
+| `assistant_end`   | `{ fullContent }`   | Complete assistant message     |
+| `tool_start`      | `{ name, query }`   | Web search initiated           |
+| `tool_result`     | `{ results }`       | Search results count           |
+| `records`         | `{ records[] }`     | Structured strategies produced |
+| `error`           | `{ code, message }` | Error during processing        |
+| `done`            | `{}`                | Stream complete                |
 
 ## Error Handling Philosophy
 
@@ -53,42 +65,44 @@ Inspired by [pure-fx](https://github.com/igorjs/pure-fx): errors are values, not
 
 Services return `Result<T, E>` instead of throwing:
 
-```typescript
-type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
-```
-
 - `Ok(value)` wraps a successful value
 - `Err(error)` wraps a typed error
-- Routes use pattern matching to map Result variants to HTTP responses
-- No try/catch in route handlers, only in the boundary where external code (OpenAI SDK, DB) is called
+- Routes use `matchResult()` to map Result variants to HTTP responses
+- No try/catch in route handlers
 
 ### Option pattern
 
 For nullable lookups:
 
-```typescript
-type Option<T> = { some: true; value: T } | { some: false };
-```
-
 - `Some(value)` wraps a present value
 - `None` represents absence
-- Used for database lookups that may return no rows (e.g. "find prompt by publicId")
-- Eliminates null checks in favour of explicit handling
+- `fromNullable(row)` bridges DB nullable returns
+- `.toResult(error)` converts Option to Result for early returns
 
-### Boundary wrapping
+### Type safety
 
-External code that throws (OpenAI SDK, JSON parsing) is wrapped with `tryCatch()` at the boundary, converting exceptions into Result values. Internal code never throws.
+- **No `as` type assertions** anywhere in the codebase
+- **No `!` non-null assertions**: null checks with proper error returns
+- **No `any`**: strict TypeScript 6 with `noUncheckedIndexedAccess`
+- **`null` over `undefined`**: for V8 hidden class performance
 
 ## Database Schema
 
 ```sql
-prompts (
-  id, public_id, user_id?, text,
+conversations (
+  id, public_id, user_id?, title,
   deleted_at?, created_at, updated_at
 )
 
+messages (
+  id, public_id, conversation_id FK, role, content,
+  version, tool_calls?, tool_call_id?,
+  created_at
+)
+
 records (
-  id, public_id, prompt_id FK, user_id?, title, description,
+  id, public_id, conversation_id FK, user_id?,
+  title, description, version,
   deleted_at?, created_at, updated_at
 )
 
@@ -99,81 +113,97 @@ idempotency_keys (
 
 Key decisions:
 
-- **Turso/libSQL**: local file mode (`file:data/advisor.db`) when no Turso credentials are set. When `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are provided, operates as an embedded replica with edge sync. This enables a smooth path to multi-tenant SaaS: each tenant could get their own Turso database, resolved at connection time.
-- **Nullable `user_id`**: future multi-tenant without schema migration
-- **Soft deletes** (`deleted_at`): audit trail for future SaaS. Drizzle query helper enforces the filter globally.
-- **FK cascade delete**: prompt deletion cascades to records
-- **Re-query**: UPDATE prompt text + DELETE old records + INSERT new records. Preserves prompt identity (stable publicId).
+- **Conversations (not prompts)**: renamed to reflect multi-turn nature. The first user message serves as the title.
+- **Messages table**: stores full conversation history for LLM context. `role` is user/assistant/tool. `version` tracks edit forks. `tool_calls` stores LLM tool call requests (JSON).
+- **Visible message filtering**: `toVisibleMessages()` in the DTO excludes tool results and tool-call requests, showing only user messages and assistant text responses.
+- **Records sentinel**: when the agent produces records, the assistant message is saved as `[records:N]` (a deterministic sentinel). The client renders this as localised text ("I've prepared N strategies..."). This prevents raw JSON or markdown from leaking into the chat on page refresh.
+- **Version field**: messages and records track versions. When a user edits a message, subsequent messages are truncated and the version bumps. Records from older versions become stale.
+- **Soft deletes** (`deleted_at`): audit trail for future SaaS.
+- **FK cascade delete**: conversation deletion cascades to messages and records.
 
-## Backend Architecture
+## Agentic Architecture
 
-```
-routes -> middleware -> services -> drizzle
-```
+The agent service (`agent.service.ts`) runs a multi-turn agentic loop:
 
-- **Routes**: thin, validation + delegation only
-- **Middleware**: context stub (future auth), Pino logger, secure headers, CORS, rate limiter, error handler, idempotency
-- **Services**: business logic, return Result<T, E>
-- **DTOs**: map DB rows to API response shapes (DB schema !== API contract)
+1. Save user message to DB
+2. Load full conversation history
+3. Call LLM with history + web_search tool
+4. If LLM requests tool calls: execute searches via Jina, save results, loop back to step 3
+5. If LLM returns text:
+   a. Try `extractRecords()` for JSON
+   b. If no JSON but looks like strategies (>200 chars, no trailing `?`): make a second LLM call with `response_format: json_object` to convert prose to records
+   c. If records found: save sentinel, insert records, yield `assistant_end` + `records` events
+   d. If no records: save as follow-up question, yield `assistant_end`
+6. Max 5 tool-call rounds to prevent infinite loops
 
-### Middleware chain
+### Two-phase records extraction
 
-1. Logger (Pino + request correlation ID)
-2. Secure headers (`hono/secure-headers`)
-3. CORS (restricted to client origin)
-4. Context (stub: `{ userId: null }`, future auth populates this)
-5. Error handler (catches unhandled errors, formats as structured response)
+Models don't always return JSON even when instructed. The fallback extraction:
 
-Rate limiter and idempotency are applied per-route on mutations.
+1. `extractRecords(content)`: strip code fences, find outermost `{}`, parse with zod
+2. If null and `looksLikeStrategies(content)`: call LLM with `EXTRACTION_PROMPT` and `json_object` format
+3. Require `records.length > 0` to prevent empty-array false positives
 
 ## Frontend Architecture
 
+### Layout
+
+```
+Landing page (/)           Chat view (/chat/:id)
+┌──────────────────┐      ┌──────┬──────────────┐
+│                  │      │Header│ + New Chat    │
+│   Title + Form   │  =>  ├──────┤──────────────┤
+│   (centred)      │      │ Chat │ Records panel │
+│                  │      │      │ (when ready)  │
+└──────────────────┘      ├──────┤              │
+                          │Input │              │
+                          └──────┴──────────────┘
+```
+
+### Component tree
+
 ```
 App
-  PromptForm          # textarea + submit, disabled during loading
-  RecordList          # handles loading/error/empty states
-    RecordCard        # inline edit + delete
-    RecordSkeleton    # pulse-animated placeholder
-    EmptyState        # "Submit a prompt to get started"
-    ErrorBanner       # inline error with retry
+├── PromptForm (landing)
+└── Chat view
+    ├── ChatThread
+    │   └── ChatMessage (user/assistant/tool variants)
+    ├── ChatInput (textarea, /, Cmd+Enter)
+    └── RecordList (Activity panel)
+        ├── RecordCard (inline edit + delete)
+        ├── RecordSkeleton
+        └── EmptyState
 ```
 
-- **Inline editing**: no modals. Edit where you read.
-- **Optimistic updates**: react-query `onMutate` for instant UI feedback, rollback on error
-- **Skeleton loaders**: 3-4 placeholder cards during LLM calls
-- **Toasts**: sonner for CRUD feedback
+### State management
 
-## Validation
-
-Zod at every boundary:
-
-- **Env**: fail-fast on startup if OPENAI_API_KEY missing
-- **API input**: request body/params validated in route handlers
-- **LLM response**: structured output via `zodResponseFormat`, `safeParse` on response
-- **Forms**: client-side validation before submission
+- **React Query**: server state (conversations, records). Caching, optimistic updates, invalidation on SSE `records` event.
+- **useChatStream**: local streaming state (messages, isStreaming). Hydrated from server on page refresh via `displayMessages` derivation.
+- **useConversationId**: URL-backed state (`/chat/:id`). Simple pushState/popstate, no router library needed yet.
+- **No useEffect**: except `popstate` listener (external system sync) and `keydown` listener for hotkeys. All other state is derived during render or driven by event handlers.
 
 ## Security
 
-The assessment says "no security required", but this is an LLM app with real attack surface:
-
-- **Prompt injection**: system prompt with boundaries, input length limits, structured output enforcement
+- **Prompt injection**: system prompt with clear boundaries, input length limits (5000 chars)
 - **XSS**: no `dangerouslySetInnerHTML`, plain text rendering only
-- **Rate limiting**: in-memory per-IP on mutation endpoints (LLM calls cost money)
+- **Rate limiting**: in-memory per-IP on mutation endpoints
+- **Idempotency**: `Idempotency-Key` header on POST mutations to prevent duplicate LLM calls
 - **Secure headers**: CSP, X-Frame-Options via Hono middleware
-- **Input sanitisation**: control character stripping, max length via zod
-
-## Future-Proofing (designed for, not implemented)
-
-- Multi-tenant data isolation (nullable `user_id` ready)
-- RBAC/ABAC (context middleware slot)
-- Authentication (middleware chain designed for it)
-- shadcn/ui component library (Radix + Tailwind foundation)
-- Mobile-first responsive (Tailwind default)
+- **Input validation**: zod on every boundary (env, API input, LLM response)
 
 ## Testing Strategy
 
-- **RED/GREEN TDD**: write failing tests first, implement to pass
-- **BDD**: test behaviour and contracts, not implementation details
-- **AAA pattern**: Arrange, Act, Assert
-- **Server**: Vitest + Hono `app.request()` for integration, `vi.mock()` for unit
-- **Assertions**: test HTTP responses, status codes, response shapes. Never test internal state.
+### Unit + Integration (88 tests, Vitest)
+
+- **RED/GREEN TDD** with BDD/AAA pattern
+- Result/Option library, extractRecords JSON parsing, DTO message filtering
+- Service-level CRUD with in-memory SQLite
+- Full HTTP lifecycle via Hono `app.request()`
+- Records PATCH/DELETE routes with seeded test data
+
+### End-to-End (17 tests, Playwright)
+
+- Real server, real DB, real LLM calls
+- Landing page, conversation flow, records panel, page refresh
+- Keyboard shortcuts, focus management, error states
+- `test.slow()` for multi-turn tests that make multiple LLM calls

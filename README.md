@@ -35,9 +35,9 @@ For the full license terms, see [LICENSE](./LICENSE).
 
 ---
 
-Full-stack agentic LLM advisor. Start a conversation, the AI agent researches
-the web and produces structured advisory records that you can review, edit, and
-manage.
+Full-stack agentic LLM advisor. Start a conversation, the AI agent interviews
+you about your client's situation, researches the web, and produces structured
+advisory records that you can review, edit, and manage.
 
 ## Prerequisites
 
@@ -66,14 +66,14 @@ API requests to the server on port 3001.
 
 ## Environment
 
-| Variable | Required | Description |
-|---|---|---|
-| `LLM_API_KEY` | Yes | API key for the LLM provider |
-| `LLM_BASE_URL` | No | OpenAI-compatible base URL (defaults to OpenAI) |
-| `LLM_MODEL` | No | Model identifier (defaults to `gpt-4o-mini`) |
-| `JINA_API_KEY` | No | Jina Search API key for web research |
-| `TURSO_DATABASE_URL` | No | Turso remote database URL |
-| `TURSO_AUTH_TOKEN` | No | Turso authentication token |
+| Variable             | Required | Description                                     |
+| -------------------- | -------- | ----------------------------------------------- |
+| `LLM_API_KEY`        | Yes      | API key for the LLM provider                    |
+| `LLM_BASE_URL`       | No       | OpenAI-compatible base URL (defaults to OpenAI) |
+| `LLM_MODEL`          | No       | Model identifier (defaults to `gpt-4o-mini`)    |
+| `JINA_API_KEY`       | Yes      | Jina Search API key for web research            |
+| `TURSO_DATABASE_URL` | No       | Turso remote database URL                       |
+| `TURSO_AUTH_TOKEN`   | No       | Turso authentication token                      |
 
 ### LLM Provider
 
@@ -95,41 +95,50 @@ advisor/
 ├── client/              # React 19 SPA (Vite + Tailwind CSS 4)
 │   └── src/
 │       ├── api/         # API client functions
-│       ├── components/  # UI components (chat, records, forms)
-│       ├── hooks/       # Custom hooks (chat stream, hotkeys, routing)
+│       ├── components/  # Chat bubbles, records cards, forms, kbd hints
+│       ├── hooks/       # useChatStream, useConversationId, useHotkey
+│       ├── locales/     # i18n translation files
 │       └── types/       # Shared type definitions
 ├── server/              # Hono API server
 │   └── src/
-│       ├── config/      # LLM, rate-limit, search, prompt configuration
+│       ├── config/      # LLM, rate-limit, search, system prompt
 │       ├── db/          # Drizzle ORM schema and migrations
-│       ├── dto/         # Data transfer objects
-│       ├── lib/         # Result/Option types, HTTP helpers, error types
+│       ├── dto/         # Data transfer objects (conversation, record, message)
+│       ├── lib/         # Result/Option types, HTTP helpers, extractRecords
 │       ├── middleware/   # CORS, security, rate-limiter, idempotency, logging
-│       ├── routes/      # HTTP route handlers
-│       └── services/    # Business logic (agent, conversation, record, LLM, search)
+│       ├── routes/      # HTTP route handlers (conversations, records, chat)
+│       └── services/    # Agent loop, conversation, record, LLM, search
+├── e2e/                 # Playwright end-to-end tests
 ├── docs/dev/            # Design decisions and implementation plan
 └── package.json         # Root workspace configuration
 ```
 
 ### Key Design Decisions
 
-- **Errors as values:** Services return `Result<T, DomainError>` instead of
-  throwing. Routes use a `matchResult()` helper to map results to HTTP responses.
-- **Agentic chat:** The AI agent has access to web search (Jina) and runs a
-  multi-turn tool-use loop before producing structured records.
-- **SSE streaming:** Agent events (thinking, searching, responding) stream to
+- **Agentic interview:** The AI asks one clarifying question at a time before
+  producing strategies. This creates a natural conversation flow rather than
+  dumping questions on the user.
+- **Two-phase records extraction:** If the LLM returns prose instead of JSON,
+  a focused second call with `response_format: json_object` converts it to
+  structured records. Handles model non-compliance gracefully.
+- **SSE streaming:** Agent events (searching, responding, records) stream to
   the client in real-time via Server-Sent Events.
-- **Zero useEffect:** React state is derived during render or driven by event
-  handlers. The only useEffect is for `popstate` (browser navigation), a
-  legitimate external system sync.
-- **Functional core:** Result/Option types inspired by pure-fx, no type
-  assertions, strict TypeScript 6.
+- **Errors as values:** Services return `Result<T, DomainError>` instead of
+  throwing. Routes use a `matchResult()` helper.
+- **Message persistence:** Chat messages are stored in the DB and hydrated on
+  page refresh via the conversation API. A deterministic sentinel (`[records:N]`)
+  is stored for records-producing messages and rendered as localised text by
+  the client.
+- **Zero type assertions:** No `as` casts, no `!` non-null assertions. Type
+  guards and null checks throughout.
+- **Functional core:** Result/Option types inspired by pure-fx, strict
+  TypeScript 6, `null` over `undefined`.
 
 ## Tech Stack
 
 - **Frontend:** React 19, @tanstack/react-query, Tailwind CSS 4, react-i18next, sonner
 - **Backend:** Hono, Drizzle ORM, Turso/libSQL, OpenAI SDK, Pino, zod 4
-- **Testing:** Vitest with Hono `app.request()` integration tests
+- **Testing:** Vitest (88 unit/integration tests), Playwright (17 e2e tests)
 - **Language:** TypeScript 6 (strict mode, no `any`, no `as` assertions)
 
 ## API Endpoints
@@ -138,7 +147,7 @@ advisor/
 GET    /api/health                                             Health check
 
 POST   /api/v1/conversations                                   Create a conversation
-GET    /api/v1/conversations/:id                               Get conversation with records
+GET    /api/v1/conversations/:id                               Get conversation with records + messages
 PATCH  /api/v1/conversations/:id                               Re-query with updated text
 
 POST   /api/v1/conversations/:id/chat                          Send message (SSE stream)
@@ -153,7 +162,8 @@ DELETE /api/v1/conversations/:id/records/:recordId             Delete a record
 | Command            | Description                                      |
 | ------------------ | ------------------------------------------------ |
 | `pnpm dev`         | Start both client and server in development mode |
-| `pnpm test`        | Run all tests                                    |
+| `pnpm test`        | Run all unit and integration tests (Vitest)      |
+| `pnpm test:e2e`    | Run end-to-end tests (Playwright, needs server)  |
 | `pnpm test:watch`  | Run server tests in watch mode                   |
 | `pnpm build`       | Build both client and server                     |
 | `pnpm db:generate` | Generate a new database migration                |
@@ -162,19 +172,31 @@ DELETE /api/v1/conversations/:id/records/:recordId             Delete a record
 ## Testing
 
 ```bash
-# Run all tests
+# Unit + integration tests (fast, no server needed)
 pnpm test
 
-# Run with watch mode
+# End-to-end tests (starts dev servers, real LLM calls)
+pnpm test:e2e
+
+# Watch mode for TDD
 pnpm test:watch
 ```
 
-Tests are organised by layer:
+### Unit and Integration Tests (88 tests)
 
-- **Unit:** Result/Option library, LLM service contract
+- **Unit:** Result/Option library, extractRecords JSON parsing, conversation DTO message filtering
 - **Middleware:** Error handler status mapping, rate limiter behaviour
 - **Service:** Conversation CRUD, record CRUD, re-query atomicity, LLM failure propagation
-- **API Integration:** Full HTTP request lifecycle via Hono `app.request()`
+- **API Integration:** Full HTTP request lifecycle via Hono `app.request()`, including records PATCH/DELETE routes
+
+### End-to-End Tests (17 tests, Playwright)
+
+- **Landing page:** Title, subtitle, form validation, submit button states
+- **Conversation flow:** Prompt submission, URL routing, AI responses, follow-up messages
+- **Records panel:** Strategy cards, edit/delete buttons, inline editing
+- **Persistence:** Message hydration on page refresh, sentinel rendering
+- **Navigation:** New chat, URL routing, error states
+- **Input UX:** Enter for newlines, Cmd+Enter to submit, focus management
 
 ## Design Docs
 

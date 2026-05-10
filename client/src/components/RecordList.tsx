@@ -2,8 +2,8 @@
 // Copyright (c) 2026 igorjs
 
 import { useCallback, useRef, useState } from "react";
-import { useDeleteRecord, useUpdateRecord } from "../hooks/useRecords.js";
 import { useHotkey } from "../hooks/useHotkey.js";
+import { useDeleteRecord, useUpdateRecord } from "../hooks/useRecords.js";
 import type { RecordResponse } from "../types/api.js";
 import { EmptyState } from "./EmptyState.js";
 import { Kbd } from "./Kbd.js";
@@ -56,7 +56,8 @@ export function RecordList({ conversationPublicId, records, disabled }: RecordLi
     <div ref={listRef} className="space-y-3">
       <div className="flex items-center justify-end gap-3 text-xs text-gray-400 dark:text-gray-500">
         <span className="flex items-center gap-1">
-          Navigate <Kbd>J</Kbd><Kbd>K</Kbd>
+          Navigate <Kbd>J</Kbd>
+          <Kbd>K</Kbd>
         </span>
       </div>
       {records.map((record, index) => (
@@ -71,8 +72,7 @@ export function RecordList({ conversationPublicId, records, disabled }: RecordLi
             updateMutation.mutate({
               recordPublicId: record.publicId,
               data: updateData,
-            })
-          }
+            })}
           onDelete={() => deleteMutation.mutate(record.publicId)}
         />
       ))}

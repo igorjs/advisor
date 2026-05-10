@@ -38,7 +38,7 @@ export function useUpdateRecord(conversationPublicId: string) {
             records: previous.data.records.map((record) =>
               record.publicId === recordPublicId
                 ? { ...record, ...data }
-                : record,
+                : record
             ),
           },
         });
@@ -57,7 +57,6 @@ export function useUpdateRecord(conversationPublicId: string) {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
     },
-
   });
 }
 
@@ -67,8 +66,7 @@ export function useDeleteRecord(conversationPublicId: string) {
   const queryKey = ["conversations", conversationPublicId];
 
   return useMutation({
-    mutationFn: (recordPublicId: string) =>
-      deleteRecord(conversationPublicId, recordPublicId),
+    mutationFn: (recordPublicId: string) => deleteRecord(conversationPublicId, recordPublicId),
 
     // Optimistic delete on the conversation cache
     onMutate: async (recordPublicId) => {
@@ -100,6 +98,5 @@ export function useDeleteRecord(conversationPublicId: string) {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
     },
-
   });
 }

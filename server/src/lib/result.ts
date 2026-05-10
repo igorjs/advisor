@@ -26,8 +26,7 @@ export function Ok<T, E = never>(value: T): Result<T, E> {
     error: undefined as never,
     map: <U>(fn: (value: T) => U) => Ok<U, E>(fn(value)),
     flatMap: <U>(fn: (value: T) => Result<U, E>) => fn(value),
-    match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) =>
-      matcher.ok(value),
+    match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) => matcher.ok(value),
   };
 }
 
@@ -38,8 +37,7 @@ export function Err<T = never, E = string>(error: E): Result<T, E> {
     error,
     map: <U>() => Err<U, E>(error),
     flatMap: <U>() => Err<U, E>(error),
-    match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) =>
-      matcher.err(error),
+    match: <U>(matcher: { ok: (value: T) => U; err: (error: E) => U }) => matcher.err(error),
   };
 }
 
@@ -62,8 +60,7 @@ export function Some<T>(value: T): Option<T> {
     value,
     map: <U>(fn: (value: T) => U) => Some(fn(value)),
     flatMap: <U>(fn: (value: T) => Option<U>) => fn(value),
-    match: <U>(matcher: { some: (value: T) => U; none: () => U }) =>
-      matcher.some(value),
+    match: <U>(matcher: { some: (value: T) => U; none: () => U }) => matcher.some(value),
     toResult: <E>() => Ok<T, E>(value),
   };
 }
@@ -74,8 +71,7 @@ export function None<T = never>(): Option<T> {
     value: undefined as never,
     map: <U>() => None<U>(),
     flatMap: <U>() => None<U>(),
-    match: <U>(matcher: { some: (value: T) => U; none: () => U }) =>
-      matcher.none(),
+    match: <U>(matcher: { some: (value: T) => U; none: () => U }) => matcher.none(),
     toResult: <E>(error: E) => Err<T, E>(error),
   };
 }

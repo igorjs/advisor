@@ -4,7 +4,7 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, records } from "../db/schema.js";
-import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
+import { type RecordResponse, toRecordResponse } from "../dto/record.dto.js";
 import { Err, fromNullable, Ok, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 
@@ -34,7 +34,10 @@ export function createRecordService(db: AppDatabase): RecordService {
       .toResult({ code: "NOT_FOUND", message: `Conversation with id '${publicId}' not found.` });
   };
 
-  const resolveRecord = async (conversationId: number, recordPublicId: string): Promise<Result<typeof records.$inferSelect, DomainError>> => {
+  const resolveRecord = async (
+    conversationId: number,
+    recordPublicId: string,
+  ): Promise<Result<typeof records.$inferSelect, DomainError>> => {
     const row = await db
       .select()
       .from(records)

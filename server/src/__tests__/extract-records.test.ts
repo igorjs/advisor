@@ -118,7 +118,7 @@ describe("extractRecords", () => {
 
   it("returns null for malformed JSON", () => {
     // Arrange
-    const input = '{"records": [{"title": "A", "description":}]}';
+    const input = "{\"records\": [{\"title\": \"A\", \"description\":}]}";
 
     // Act
     const result = extractRecords(input);

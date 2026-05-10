@@ -111,8 +111,8 @@ export function createLlmService(config: LlmServiceConfig): LlmService {
         }
 
         if (
-          error instanceof Error &&
-          error.message.includes("timed out")
+          error instanceof Error
+          && error.message.includes("timed out")
         ) {
           return Err({
             code: "LLM_TIMEOUT",

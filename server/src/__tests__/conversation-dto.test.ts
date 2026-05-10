@@ -89,7 +89,13 @@ describe("toVisibleMessages", () => {
   it("excludes assistant messages with tool calls", () => {
     // Arrange: assistant message that requested a tool call (no user-visible content)
     const rows = [
-      { ...baseMessage, role: "assistant", content: "", toolCalls: '[{"id":"call_1","type":"function","function":{"name":"web_search","arguments":"{}"}}]' },
+      {
+        ...baseMessage,
+        role: "assistant",
+        content: "",
+        toolCalls:
+          "[{\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"web_search\",\"arguments\":\"{}\"}}]",
+      },
     ];
 
     // Act
@@ -102,7 +108,7 @@ describe("toVisibleMessages", () => {
   it("excludes assistant messages with tool calls even if they have content", () => {
     // Arrange: some models include a text preamble alongside tool calls
     const rows = [
-      { ...baseMessage, role: "assistant", content: "Let me search for that.", toolCalls: '[{"id":"call_1"}]' },
+      { ...baseMessage, role: "assistant", content: "Let me search for that.", toolCalls: "[{\"id\":\"call_1\"}]" },
     ];
 
     // Act
@@ -115,7 +121,7 @@ describe("toVisibleMessages", () => {
   it("excludes tool result messages", () => {
     // Arrange: raw search results from Jina, not meant for display
     const rows = [
-      { ...baseMessage, role: "tool", content: '[{"title":"ATO","url":"..."}]', toolCallId: "call_1" },
+      { ...baseMessage, role: "tool", content: "[{\"title\":\"ATO\",\"url\":\"...\"}]", toolCallId: "call_1" },
     ];
 
     // Act
@@ -171,9 +177,15 @@ describe("toVisibleMessages", () => {
       { ...baseMessage, id: 1, publicId: "m1", role: "user", content: "Tax advice for $200k income in Sydney" },
       { ...baseMessage, id: 2, publicId: "m2", role: "assistant", content: "Do you have investments?" },
       { ...baseMessage, id: 3, publicId: "m3", role: "user", content: "Yes, shares and property" },
-      { ...baseMessage, id: 4, publicId: "m4", role: "assistant", content: "", toolCalls: '[{"id":"c1"}]' },
+      { ...baseMessage, id: 4, publicId: "m4", role: "assistant", content: "", toolCalls: "[{\"id\":\"c1\"}]" },
       { ...baseMessage, id: 5, publicId: "m5", role: "tool", content: "search results", toolCallId: "c1" },
-      { ...baseMessage, id: 6, publicId: "m6", role: "assistant", content: '{"records":[{"title":"A","description":"B"}]}' },
+      {
+        ...baseMessage,
+        id: 6,
+        publicId: "m6",
+        role: "assistant",
+        content: "{\"records\":[{\"title\":\"A\",\"description\":\"B\"}]}",
+      },
     ];
 
     // Act

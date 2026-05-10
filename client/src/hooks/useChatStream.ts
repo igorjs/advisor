@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 igorjs
 
-import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { showHttpErrorToast } from "../lib/error-toast.js";
@@ -119,12 +119,13 @@ export function useChatStream(): UseChatStreamResult {
               setMessages((prev) =>
                 prev.map((msg, i) => {
                   // Find the last loading tool message
-                  const isLastLoadingTool =
-                    msg.role === "tool" &&
-                    msg.toolStatus === "loading" &&
-                    !prev.slice(i + 1).some((m) => m.role === "tool" && m.toolStatus === "loading");
-                  return isLastLoadingTool ? { role: msg.role, content: msg.content, toolStatus: "done" as const } : msg;
-                }),
+                  const isLastLoadingTool = msg.role === "tool"
+                    && msg.toolStatus === "loading"
+                    && !prev.slice(i + 1).some((m) => m.role === "tool" && m.toolStatus === "loading");
+                  return isLastLoadingTool
+                    ? { role: msg.role, content: msg.content, toolStatus: "done" as const }
+                    : msg;
+                })
               );
               break;
 
@@ -186,10 +187,9 @@ export function useChatStream(): UseChatStreamResult {
     setMessages((prev) => {
       if (prev.length > 0) return prev;
       return serverMessages.map((m) => {
-        const role: ChatMessage["role"] =
-          m.role === "user" || m.role === "assistant" || m.role === "tool"
-            ? m.role
-            : "assistant";
+        const role: ChatMessage["role"] = m.role === "user" || m.role === "assistant" || m.role === "tool"
+          ? m.role
+          : "assistant";
         return { role, content: m.content };
       });
     });

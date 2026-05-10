@@ -143,8 +143,8 @@ test.describe("Records Panel", () => {
       await waitForAIReply(page);
     }
 
-    // Wait for records panel
-    await expect(page.getByText(/\d+ strateg/i)).toBeVisible({ timeout: 120_000 });
+    // Wait for records panel (match the exact "N strategies" label, not the chat bubble)
+    await expect(page.getByText(/^\d+ strategies$/)).toBeVisible({ timeout: 120_000 });
     await expect(page.getByRole("button", { name: "Edit" }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete" }).first()).toBeVisible();
   });

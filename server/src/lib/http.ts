@@ -9,8 +9,8 @@
 
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import type { DomainError, ErrorCode } from "./types.js";
 import type { Result } from "./result.js";
+import type { DomainError, ErrorCode } from "./types.js";
 
 const STATUS_MAP: Record<ErrorCode, ContentfulStatusCode> = {
   VALIDATION_ERROR: 400,

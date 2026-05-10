@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 igorjs
 
-import OpenAI from "openai";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import type { AppDatabase } from "../db/index.js";
-import { conversations, messages, records } from "../db/schema.js";
-import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
+import OpenAI from "openai";
 import { LLM_TIMEOUT_MS } from "../config/llm.js";
 import { buildSystemPrompt } from "../config/prompts.js";
-import { extractRecords, type ExtractedRecords } from "../lib/extract-records.js";
-import type { SearchService } from "./search.service.js";
+import type { AppDatabase } from "../db/index.js";
+import { conversations, messages, records } from "../db/schema.js";
+import { type RecordResponse, toRecordResponse } from "../dto/record.dto.js";
+import { type ExtractedRecords, extractRecords } from "../lib/extract-records.js";
 import type { LlmServiceConfig } from "./llm.service.js";
+import type { SearchService } from "./search.service.js";
 
 // Heuristic: if the response is substantial and doesn't end with a question,
 // the model likely returned strategies as prose instead of JSON.
@@ -71,8 +71,7 @@ const WEB_SEARCH_TOOL: OpenAI.ChatCompletionTool = {
         },
         site: {
           type: "string",
-          description:
-            "Optional domain to scope the search (e.g. 'ato.gov.au'). Omit for general web search.",
+          description: "Optional domain to scope the search (e.g. 'ato.gov.au'). Omit for general web search.",
         },
       },
       required: ["query"],
@@ -194,8 +193,7 @@ export function createAgentService(
             tools: [WEB_SEARCH_TOOL],
           });
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "LLM call failed.";
+          const message = error instanceof Error ? error.message : "LLM call failed.";
           yield { type: "error", code: "LLM_ERROR", message };
           yield { type: "done" };
           return;
@@ -467,8 +465,7 @@ export function createAgentService(
             tools: [WEB_SEARCH_TOOL],
           });
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "LLM call failed.";
+          const message = error instanceof Error ? error.message : "LLM call failed.";
           yield { type: "error", code: "LLM_ERROR", message };
           yield { type: "done" };
           return;
@@ -605,4 +602,3 @@ export function createAgentService(
     },
   };
 }
-

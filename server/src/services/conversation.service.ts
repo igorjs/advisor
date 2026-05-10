@@ -4,8 +4,13 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { AppDatabase } from "../db/index.js";
 import { conversations, messages, records } from "../db/schema.js";
-import { toConversationResponse, toVisibleMessages, type ConversationResponse, type MessageResponse } from "../dto/conversation.dto.js";
-import { toRecordResponse, type RecordResponse } from "../dto/record.dto.js";
+import {
+  type ConversationResponse,
+  type MessageResponse,
+  toConversationResponse,
+  toVisibleMessages,
+} from "../dto/conversation.dto.js";
+import { type RecordResponse, toRecordResponse } from "../dto/record.dto.js";
 import { Err, fromNullable, Ok, type Option, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 

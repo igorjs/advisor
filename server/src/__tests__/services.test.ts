@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 igorjs
 
+import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDatabase, createDatabase, type DatabaseConnection } from "../db/index.js";
-import { eq } from "drizzle-orm";
 import { conversations, records } from "../db/schema.js";
-import { createConversationService, type ConversationService } from "../services/conversation.service.js";
+import { type ConversationService, createConversationService } from "../services/conversation.service.js";
 import { createRecordService, type RecordService } from "../services/record.service.js";
 
 describe("ConversationService", () => {
@@ -144,11 +144,21 @@ describe("RecordService", () => {
     const created = await conversationService.createConversation("test");
     if (!created.ok) throw new Error("Setup failed");
 
-    const conversation = await conn.db.select().from(conversations).where(eq(conversations.publicId, created.value.publicId)).get();
+    const conversation = await conn.db.select().from(conversations).where(
+      eq(conversations.publicId, created.value.publicId),
+    ).get();
     if (!conversation) throw new Error("Conversation not found");
 
-    const r1 = await conn.db.insert(records).values({ conversationId: conversation.id, title: "Tip 1", description: "First tip" }).returning().get();
-    const r2 = await conn.db.insert(records).values({ conversationId: conversation.id, title: "Tip 2", description: "Second tip" }).returning().get();
+    const r1 = await conn.db.insert(records).values({
+      conversationId: conversation.id,
+      title: "Tip 1",
+      description: "First tip",
+    }).returning().get();
+    const r2 = await conn.db.insert(records).values({
+      conversationId: conversation.id,
+      title: "Tip 2",
+      description: "Second tip",
+    }).returning().get();
 
     return {
       conversationPublicId: created.value.publicId,

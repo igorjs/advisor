@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 igorjs
 
-import {
-  SEARCH_API_URL,
-  SEARCH_MAX_RESULTS,
-  SEARCH_TIMEOUT_MS,
-} from "../config/search.js";
+import { SEARCH_API_URL, SEARCH_MAX_RESULTS, SEARCH_TIMEOUT_MS } from "../config/search.js";
 import { Err, Ok, type Result } from "../lib/result.js";
 import type { DomainError } from "../lib/types.js";
 

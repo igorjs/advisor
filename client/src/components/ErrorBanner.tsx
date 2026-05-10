@@ -12,10 +12,9 @@ interface ErrorBannerProps {
 export function ErrorBanner({ error, onRetry }: ErrorBannerProps) {
   const { t } = useTranslation();
 
-  const message =
-    "code" in error
-      ? getErrorMessage(error as ApiRequestError, t)
-      : t("errors.generic");
+  const message = "code" in error
+    ? getErrorMessage(error as ApiRequestError, t)
+    : t("errors.generic");
 
   return (
     <div className="rounded-md bg-red-50 dark:bg-red-950 p-4">

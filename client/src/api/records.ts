@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 igorjs
 
-import { api } from "./client.js";
 import type { DataResponse, RecordResponse } from "../types/api.js";
+import { api } from "./client.js";
 
 // No getRecords: records come embedded in the conversation response.
 // Only mutation endpoints are called directly.

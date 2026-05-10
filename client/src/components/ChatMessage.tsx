@@ -53,7 +53,10 @@ export function ChatMessage({ message, onEdit }: ChatMessageProps) {
               />
               <div className="flex justify-end gap-2">
                 <button
-                  onClick={() => { setEditText(message.content); setIsEditing(false); }}
+                  onClick={() => {
+                    setEditText(message.content);
+                    setIsEditing(false);
+                  }}
                   className="rounded-lg px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   Cancel
@@ -79,7 +82,11 @@ export function ChatMessage({ message, onEdit }: ChatMessageProps) {
               aria-label="Edit message"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
+                />
               </svg>
             </button>
           )}
@@ -110,28 +117,30 @@ export function ChatMessage({ message, onEdit }: ChatMessageProps) {
     case "tool":
       return (
         <div className="flex items-center gap-2 pl-9">
-          {message.toolStatus === "loading" ? (
-            <svg
-              className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          ) : (
-            <svg
-              className="h-3.5 w-3.5 shrink-0 text-green-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
+          {message.toolStatus === "loading"
+            ? (
+              <svg
+                className="h-3.5 w-3.5 shrink-0 animate-spin text-amber-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            )
+            : (
+              <svg
+                className="h-3.5 w-3.5 shrink-0 text-green-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                aria-hidden="true"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
           <span className="text-[11px] text-gray-400 dark:text-gray-500">{message.content}</span>
         </div>
       );

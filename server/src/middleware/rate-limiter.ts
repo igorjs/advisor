@@ -2,10 +2,7 @@
 // Copyright (c) 2026 igorjs
 
 import type { MiddlewareHandler } from "hono";
-import {
-  RATE_LIMIT_MAX_REQUESTS,
-  RATE_LIMIT_WINDOW_MS,
-} from "../config/rate-limit.js";
+import { RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS } from "../config/rate-limit.js";
 
 interface RateLimitEntry {
   count: number;
@@ -36,8 +33,7 @@ export function createRateLimiter(
   return async (c, next) => {
     // First entry in x-forwarded-for is the real client IP when behind a proxy.
     // Falls back to "unknown" so the limiter still works without a proxy.
-    const ip =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const now = Date.now();
 
     const entry = store.get(ip);

@@ -57,7 +57,13 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   }
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); doSubmit(); }} className="flex items-start gap-2">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        doSubmit();
+      }}
+      className="flex items-start gap-2"
+    >
       <div className="relative flex-1">
         <textarea
           ref={mountRef}

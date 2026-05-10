@@ -3,15 +3,6 @@
 
 import { Activity, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import type { ChatMessage, MessageResponse } from "./types/api.js";
-
-function isValidRole(role: string): role is ChatMessage["role"] {
-  return role === "user" || role === "assistant" || role === "tool";
-}
-
-function toChatMessage(m: MessageResponse): ChatMessage {
-  return { role: isValidRole(m.role) ? m.role : "assistant", content: m.content };
-}
 import { ChatInput } from "./components/ChatInput.js";
 import { ChatThread } from "./components/ChatThread.js";
 import { ErrorBanner } from "./components/ErrorBanner.js";
@@ -22,6 +13,15 @@ import { ThemeToggle } from "./components/ThemeToggle.js";
 import { useChatStream } from "./hooks/useChatStream.js";
 import { useConversationId } from "./hooks/useConversationId.js";
 import { useConversation, useCreateConversation } from "./hooks/useConversations.js";
+import type { ChatMessage, MessageResponse } from "./types/api.js";
+
+function isValidRole(role: string): role is ChatMessage["role"] {
+  return role === "user" || role === "assistant" || role === "tool";
+}
+
+function toChatMessage(m: MessageResponse): ChatMessage {
+  return { role: isValidRole(m.role) ? m.role : "assistant", content: m.content };
+}
 
 export function App() {
   const { t } = useTranslation();
@@ -141,9 +141,7 @@ export function App() {
             <ChatThread
               messages={displayMessages}
               isStreaming={chat.isStreaming}
-              onEditMessage={(index, newContent) =>
-                chat.editMessage(conversationId, index, newContent)
-              }
+              onEditMessage={(index, newContent) => chat.editMessage(conversationId, index, newContent)}
             />
           </div>
 

@@ -2,14 +2,7 @@
 // Copyright (c) 2026 igorjs
 
 import { describe, expect, it } from "vitest";
-import {
-  Err,
-  fromNullable,
-  None,
-  Ok,
-  type Result,
-  Some,
-} from "../lib/result.js";
+import { Err, fromNullable, None, Ok, type Result, Some } from "../lib/result.js";
 
 describe("Result", () => {
   describe("Ok", () => {
@@ -33,8 +26,7 @@ describe("Result", () => {
 
     it("flatMaps into another Result", () => {
       // Arrange
-      const validate = (n: number): Result<number, string> =>
-        n > 0 ? Ok(n * 3) : Err("must be positive");
+      const validate = (n: number): Result<number, string> => n > 0 ? Ok(n * 3) : Err("must be positive");
 
       // Act
       const result = Ok<number, string>(5).flatMap(validate);

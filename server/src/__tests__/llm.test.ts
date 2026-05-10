@@ -15,8 +15,8 @@ export function createMockLlmService(
   overrides?: Partial<LlmService>,
 ): LlmService {
   return {
-    generateRecords: overrides?.generateRecords ??
-      (() =>
+    generateRecords: overrides?.generateRecords
+      ?? (() =>
         Promise.resolve(
           Ok([
             { title: "Tip 1", description: "Do this first" },

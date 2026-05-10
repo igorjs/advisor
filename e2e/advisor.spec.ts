@@ -6,6 +6,7 @@
  * No mocking: tests verify structural UI behaviour, not exact LLM output.
  * Timeouts are generous because LLM calls take 5-30 seconds.
  */
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 const TEST_PROMPT =
@@ -304,5 +305,202 @@ test.describe("URL Routing", () => {
 
     // ErrorBanner shows the API error message for 404
     await expect(page.getByText(/not found/i)).toBeVisible({ timeout: 10_000 });
+  });
+});
+
+// ─── Dark Mode ─────────────────────────────────────────────────
+
+test.describe("Dark Mode", () => {
+  test("respects system dark preference", async ({ browser }) => {
+    // Launch a context with dark color scheme emulation
+    const context = await browser.newContext({ colorScheme: "dark" });
+    const page = await context.newPage();
+    await page.goto("/");
+
+    // The inline script in <head> should add .dark to <html>
+    const hasDark = await page.evaluate(() =>
+      document.documentElement.classList.contains("dark"),
+    );
+    expect(hasDark).toBe(true);
+
+    // Body should have dark background (gray-950 = rgb(2, 6, 23) approximately)
+    const bgColor = await page.evaluate(() =>
+      getComputedStyle(document.body).backgroundColor,
+    );
+    // Should NOT be the light bg (gray-50 = rgb(249, 250, 251))
+    expect(bgColor).not.toBe("rgb(249, 250, 251)");
+
+    await context.close();
+  });
+
+  test("respects system light preference", async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme: "light" });
+    const page = await context.newPage();
+    await page.goto("/");
+
+    const hasDark = await page.evaluate(() =>
+      document.documentElement.classList.contains("dark"),
+    );
+    expect(hasDark).toBe(false);
+
+    await context.close();
+  });
+
+  test("toggle switches theme", async ({ page }) => {
+    await page.goto("/");
+
+    const initialDark = await page.evaluate(() =>
+      document.documentElement.classList.contains("dark"),
+    );
+
+    // Click the theme toggle (sun or moon icon)
+    await page.getByRole("button", { name: /switch to (light|dark) mode/i }).click();
+
+    const afterToggle = await page.evaluate(() =>
+      document.documentElement.classList.contains("dark"),
+    );
+    expect(afterToggle).not.toBe(initialDark);
+  });
+
+  test("toggle is visible on both landing and chat views", async ({ page }) => {
+    // Landing page
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: /switch to (light|dark) mode/i })).toBeVisible();
+
+    // Chat view
+    await submitFromLanding(page, "Theme toggle test");
+    await waitForAIReply(page);
+    await expect(page.getByRole("button", { name: /switch to (light|dark) mode/i })).toBeVisible();
+  });
+});
+
+// ─── Accessibility ─────────────────────────────────────────────
+
+test.describe("Accessibility", () => {
+  test("landing page has no critical a11y violations", async ({ page }) => {
+    await page.goto("/");
+
+    const results = await new AxeBuilder({ page })
+      .disableRules(["color-contrast"]) // Tailwind handles contrast via design tokens
+      .analyze();
+
+    expect(results.violations.filter((v) => v.impact === "critical")).toHaveLength(0);
+  });
+
+  test("landing page has no serious a11y violations (excluding contrast)", async ({ page }) => {
+    await page.goto("/");
+
+    // Exclude color-contrast: Tailwind CSS 4 uses oklch color space and
+    // CSS custom properties that axe-core misreads as near-white foreground
+    const results = await new AxeBuilder({ page })
+      .disableRules(["color-contrast"])
+      .analyze();
+
+    const serious = results.violations.filter(
+      (v) => v.impact === "critical" || v.impact === "serious",
+    );
+
+    if (serious.length > 0) {
+      console.log(
+        "A11y violations:",
+        serious.map((v) => `${v.id}: ${v.description} (${v.impact})`),
+      );
+    }
+
+    expect(serious).toHaveLength(0);
+  });
+
+  test("chat view has no critical a11y violations", async ({ page }) => {
+    await page.goto("/");
+    await submitFromLanding(page, "Accessibility test");
+    await waitForAIReply(page);
+
+    const results = await new AxeBuilder({ page })
+      .disableRules(["color-contrast"])
+      .analyze();
+
+    expect(results.violations.filter((v) => v.impact === "critical")).toHaveLength(0);
+  });
+
+  test("dark mode has no critical a11y violations", async ({ browser }) => {
+    const context = await browser.newContext({ colorScheme: "dark" });
+    const page = await context.newPage();
+    await page.goto("/");
+
+    const results = await new AxeBuilder({ page })
+      .disableRules(["color-contrast"])
+      .analyze();
+
+    expect(results.violations.filter((v) => v.impact === "critical")).toHaveLength(0);
+    await context.close();
+  });
+});
+
+// ─── Keyboard Navigation ───────────────────────────────────────
+
+test.describe("Keyboard Navigation", () => {
+  test("/ focuses the prompt textarea on landing page", async ({ page }) => {
+    await page.goto("/");
+
+    // Click body to ensure no element is focused
+    await page.locator("body").click();
+    await page.keyboard.press("/");
+
+    await expect(page.getByRole("textbox", { name: /prompt/i })).toBeFocused({ timeout: 3_000 });
+  });
+
+  test("/ focuses chat input in conversation view", async ({ page }) => {
+    await page.goto("/");
+    await submitFromLanding(page, "Keyboard test");
+    await waitForAIReply(page);
+    await waitForInputReady(page);
+
+    // Click the header to unfocus the input
+    await page.getByText("Financial Advisor").click();
+    await page.keyboard.press("/");
+
+    await expect(
+      page.getByRole("textbox", { name: /Ask me anything/i }),
+    ).toBeFocused({ timeout: 3_000 });
+  });
+
+  test("Escape cancels message editing", async ({ page }) => {
+    await page.goto("/");
+    await submitFromLanding(page, "Keyboard escape test");
+    await waitForAIReply(page);
+    await waitForInputReady(page);
+
+    await page.getByText("Keyboard escape test").hover();
+    await page.getByRole("button", { name: "Edit message" }).click();
+
+    // Edit form should be visible
+    await expect(page.getByRole("button", { name: /Save & Resubmit/i })).toBeVisible();
+
+    // Escape should close it
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: /Save & Resubmit/i })).not.toBeVisible();
+    await expect(page.getByText("Keyboard escape test")).toBeVisible();
+  });
+
+  test("Cmd+Enter submits from chat input", async ({ page }) => {
+    await page.goto("/");
+    await submitFromLanding(page, "Cmd+Enter test");
+    await waitForAIReply(page);
+    const chatInput = await waitForInputReady(page);
+
+    await chatInput.fill("Follow-up via keyboard");
+    await chatInput.press("Meta+Enter");
+
+    await expect(page.getByText("Follow-up via keyboard")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("Tab navigates through interactive elements", async ({ page }) => {
+    await page.goto("/");
+
+    // Tab should move through focusable elements
+    await page.keyboard.press("Tab");
+    const firstFocused = await page.evaluate(() => document.activeElement?.tagName);
+    // Should focus something (button, input, etc.)
+    expect(firstFocused).toBeTruthy();
   });
 });

@@ -34,9 +34,10 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     if (!trimmed || disabled) return;
     onSend(trimmed);
     setText("");
-    // Reset height after clearing
+    // Reset height and keep focus after sending
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
     }
   }
 

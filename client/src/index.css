@@ -28,6 +28,38 @@
   }
 }
 
+/* Replace Tailwind's blue-tinted grays with zinc for a cleaner, warmer look.
+   Inspired by shadcn/ui: neutral whites, warm borders, crisp typography. */
+:root {
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #09090b;
+}
+
+/* Dark mode: swap to pure neutral tones for that Vercel/Shopify feel.
+   True blacks, warm charcoals, barely-visible borders. */
+.dark {
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e5e5e5;
+  --color-gray-300: #d4d4d4;
+  --color-gray-400: #a3a3a3;
+  --color-gray-500: #737373;
+  --color-gray-600: #525252;
+  --color-gray-700: #404040;
+  --color-gray-800: #262626;
+  --color-gray-900: #171717;
+  --color-gray-950: #0a0a0a;
+}
+
 body {
   @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
 }

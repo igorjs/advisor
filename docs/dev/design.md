@@ -164,13 +164,14 @@ Landing page (/)           Chat view (/chat/:id)
 
 ```
 App
+├── ThemeToggle (sun/moon, top-right on both views)
 ├── PromptForm (landing)
 └── Chat view
     ├── ChatThread
-    │   └── ChatMessage (user/assistant/tool variants)
-    ├── ChatInput (textarea, /, Cmd+Enter)
+    │   └── ChatMessage (user/assistant/tool + sentinel rendering)
+    ├── ChatInput (textarea, /, Cmd+Enter, auto-resize)
     └── RecordList (Activity panel)
-        ├── RecordCard (inline edit + delete)
+        ├── RecordCard (inline edit + y/N delete)
         ├── RecordSkeleton
         └── EmptyState
 ```
@@ -190,6 +191,14 @@ App
 - **Idempotency**: `Idempotency-Key` header on POST mutations to prevent duplicate LLM calls
 - **Secure headers**: CSP, X-Frame-Options via Hono middleware
 - **Input validation**: zod on every boundary (env, API input, LLM response)
+- **Rate limiting**: configurable via `RATE_LIMIT_MAX` env (100 default dev, 10-20 production)
+
+## Dark Mode
+
+- **System preference**: inline `<script>` in `<head>` checks `prefers-color-scheme` before React renders, preventing flash of wrong theme
+- **Class-based**: `@variant dark (&:where(.dark, .dark *))` in Tailwind CSS 4 overrides the built-in `@media` variant
+- **Toggle**: `ThemeToggle` component uses `useSyncExternalStore` to track `.dark` on `<html>`. Session-only override: refresh resets to system preference
+- **Coverage**: all 12 component files have `dark:` variants for backgrounds, text, borders, focus rings, hover states, disabled states, and placeholders
 
 ## Testing Strategy
 
@@ -201,9 +210,11 @@ App
 - Full HTTP lifecycle via Hono `app.request()`
 - Records PATCH/DELETE routes with seeded test data
 
-### End-to-End (17 tests, Playwright)
+### End-to-End (30 tests, Playwright + axe-core)
 
 - Real server, real DB, real LLM calls
 - Landing page, conversation flow, records panel, page refresh
-- Keyboard shortcuts, focus management, error states
+- Dark mode: system preference detection, toggle, visibility
+- Accessibility: axe-core audit (critical + serious violations) on landing, chat, and dark mode
+- Keyboard navigation: `/` focus, Escape cancel, Cmd+Enter submit, Tab traversal
 - `test.slow()` for multi-turn tests that make multiple LLM calls

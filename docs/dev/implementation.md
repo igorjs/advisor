@@ -74,7 +74,11 @@ advisor/
 - Inline message editing with truncation and version bumping
 - Interview-style prompt (one question at a time)
 - AGPL-3.0 license, SPDX headers, financial disclaimer
-- Playwright e2e test suite (17 tests against real server)
+- Dark mode: system preference detection, class-based toggle, all components
+- Persistent error toasts with code-aware messages (429, timeout, validation)
+- Configurable rate limit via RATE_LIMIT_MAX env var (100 default)
+- Playwright e2e test suite (30 tests: UI, dark mode, a11y, keyboard nav)
+- axe-core accessibility audits (critical + serious violations)
 - Expanded unit test coverage (53 to 88 tests)
 - Chat UX: textarea, Enter/newline, Cmd+Enter submit, / hotkey, auto-focus
 
@@ -93,17 +97,20 @@ advisor/
 | api.test.ts              | 10    | HTTP integration: create, get, patch, validation          |
 | records-api.test.ts      | 10    | Records PATCH/DELETE: update, 400, 404                    |
 
-### End-to-End (Playwright, 17 tests)
+### End-to-End (Playwright + axe-core, 30 tests)
 
 Real server, real DB, real LLM. `test.slow()` for multi-turn flows.
 
-| Suite                | Count | Coverage                                    |
-| -------------------- | ----- | ------------------------------------------- |
-| Landing Page         | 2     | Title, form, button states                  |
-| Conversation Flow    | 4     | Submit, URL routing, AI response, follow-up |
-| Records Panel        | 1     | Multi-turn to records, edit/delete          |
-| Page Refresh         | 2     | Message persistence, sentinel rendering     |
-| New Chat             | 2     | Return to landing, message clearing         |
-| Chat Input UX        | 3     | Enter/newline, focus, button state          |
-| Message Editing      | 2     | Edit form, escape cancel                    |
-| URL Routing + Errors | 2     | 404, API error toast                        |
+| Suite                | Count | Coverage                                        |
+| -------------------- | ----- | ----------------------------------------------- |
+| Landing Page         | 2     | Title, form, button states                      |
+| Conversation Flow    | 4     | Submit, URL routing, AI response, follow-up     |
+| Records Panel        | 1     | Multi-turn interview to records, edit/delete     |
+| Page Refresh         | 2     | Message persistence, sentinel rendering         |
+| New Chat             | 2     | Return to landing, message clearing             |
+| Chat Input UX        | 3     | Enter/newline, focus, button state              |
+| Message Editing      | 2     | Edit form, escape cancel                        |
+| URL Routing + Errors | 1     | 404 error display                               |
+| Dark Mode            | 4     | System preference, toggle, visibility both views |
+| Accessibility        | 4     | axe-core critical + serious, light + dark mode  |
+| Keyboard Navigation  | 5     | / focus, Escape, Cmd+Enter, Tab traversal       |

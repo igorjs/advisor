@@ -74,6 +74,7 @@ API requests to the server on port 3001.
 | `JINA_API_KEY`       | Yes      | Jina Search API key for web research            |
 | `TURSO_DATABASE_URL` | No       | Turso remote database URL                       |
 | `TURSO_AUTH_TOKEN`   | No       | Turso authentication token                      |
+| `RATE_LIMIT_MAX`     | No       | Requests per minute per IP (defaults to 100)    |
 
 ### LLM Provider
 
@@ -95,8 +96,9 @@ advisor/
 ├── client/              # React 19 SPA (Vite + Tailwind CSS 4)
 │   └── src/
 │       ├── api/         # API client functions
-│       ├── components/  # Chat bubbles, records cards, forms, kbd hints
+│       ├── components/  # Chat, records, forms, kbd hints, theme toggle
 │       ├── hooks/       # useChatStream, useConversationId, useHotkey
+│       ├── lib/         # Error toast helpers
 │       ├── locales/     # i18n translation files
 │       └── types/       # Shared type definitions
 ├── server/              # Hono API server
@@ -129,6 +131,9 @@ advisor/
   page refresh via the conversation API. A deterministic sentinel (`[records:N]`)
   is stored for records-producing messages and rendered as localised text by
   the client.
+- **Dark mode:** System preference detection on load, session-only toggle.
+  Class-based via `@variant dark` in Tailwind CSS 4 with no flash of wrong
+  theme (inline script in `<head>`).
 - **Zero type assertions:** No `as` casts, no `!` non-null assertions. Type
   guards and null checks throughout.
 - **Functional core:** Result/Option types inspired by pure-fx, strict
@@ -138,7 +143,7 @@ advisor/
 
 - **Frontend:** React 19, @tanstack/react-query, Tailwind CSS 4, react-i18next, sonner
 - **Backend:** Hono, Drizzle ORM, Turso/libSQL, OpenAI SDK, Pino, zod 4
-- **Testing:** Vitest (88 unit/integration tests), Playwright (17 e2e tests)
+- **Testing:** Vitest (88 unit/integration tests), Playwright (30 e2e tests), axe-core accessibility
 - **Language:** TypeScript 6 (strict mode, no `any`, no `as` assertions)
 
 ## API Endpoints
@@ -163,7 +168,8 @@ DELETE /api/v1/conversations/:id/records/:recordId             Delete a record
 | ------------------ | ------------------------------------------------ |
 | `pnpm dev`         | Start both client and server in development mode |
 | `pnpm test`        | Run all unit and integration tests (Vitest)      |
-| `pnpm test:e2e`    | Run end-to-end tests (Playwright, needs server)  |
+| `pnpm test:e2e`    | Run e2e tests headed (Playwright, needs server)  |
+| `pnpm test:e2e:ci` | Run e2e tests headless (for CI pipelines)        |
 | `pnpm test:watch`  | Run server tests in watch mode                   |
 | `pnpm build`       | Build both client and server                     |
 | `pnpm db:generate` | Generate a new database migration                |
@@ -175,8 +181,11 @@ DELETE /api/v1/conversations/:id/records/:recordId             Delete a record
 # Unit + integration tests (fast, no server needed)
 pnpm test
 
-# End-to-end tests (starts dev servers, real LLM calls)
+# End-to-end tests headed (starts dev servers, real LLM calls)
 pnpm test:e2e
+
+# End-to-end tests headless (CI)
+pnpm test:e2e:ci
 
 # Watch mode for TDD
 pnpm test:watch
@@ -189,14 +198,17 @@ pnpm test:watch
 - **Service:** Conversation CRUD, record CRUD, re-query atomicity, LLM failure propagation
 - **API Integration:** Full HTTP request lifecycle via Hono `app.request()`, including records PATCH/DELETE routes
 
-### End-to-End Tests (17 tests, Playwright)
+### End-to-End Tests (30 tests, Playwright + axe-core)
 
 - **Landing page:** Title, subtitle, form validation, submit button states
 - **Conversation flow:** Prompt submission, URL routing, AI responses, follow-up messages
-- **Records panel:** Strategy cards, edit/delete buttons, inline editing
+- **Records panel:** Multi-turn interview to records, edit/delete buttons
 - **Persistence:** Message hydration on page refresh, sentinel rendering
 - **Navigation:** New chat, URL routing, error states
 - **Input UX:** Enter for newlines, Cmd+Enter to submit, focus management
+- **Dark mode:** System preference detection, toggle, visibility on both views
+- **Accessibility:** axe-core audit (critical + serious) on landing, chat, and dark mode
+- **Keyboard navigation:** `/` focus, Escape cancel, Cmd+Enter submit, Tab traversal
 
 ## Design Docs
 

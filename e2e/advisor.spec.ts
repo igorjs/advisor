@@ -111,19 +111,40 @@ test.describe("Conversation Flow", () => {
 
 test.describe("Records Panel", () => {
   test("records appear after multi-turn conversation", async ({ page }) => {
-    test.slow(); // Multi-turn: two LLM calls + record extraction
+    test.slow(); // Multi-turn: multiple LLM calls + record extraction
+
+    // Helper: send a follow-up and wait for the input to be ready again
+    async function sendFollowUp(text: string) {
+      const input = await waitForInputReady(page);
+      await input.fill(text);
+      await page.getByRole("button", { name: /Send/i }).click();
+      await expect(page.getByText(text)).toBeVisible({ timeout: 10_000 });
+    }
+
     await page.goto("/");
     await submitFromLanding(page, TEST_PROMPT);
     await waitForAIReply(page);
 
-    const chatInput = await waitForInputReady(page);
-    await chatInput.fill("Both salaried employees. They have shares and an investment property. No private health insurance.");
-    await page.getByRole("button", { name: /Send/i }).click();
+    // Answer clarifying questions until records appear or we run out of rounds.
+    // The AI asks 2-3 questions; we provide comprehensive answers.
+    const answers = [
+      "Both salaried PAYG employees. Combined income $200k split evenly.",
+      "They have Australian shares and one investment property. No crypto.",
+      "No private health insurance. Employer-default super only. Please produce the strategies now.",
+    ];
 
-    // Wait for records to appear (the "strategies" count label)
-    await expect(page.getByText(/\d+ strateg/i)).toBeVisible({ timeout: 90_000 });
+    for (const answer of answers) {
+      // Stop early if records already appeared
+      const hasRecords = await page.getByText(/\d+ strateg/i).isVisible().catch(() => false);
+      if (hasRecords) break;
 
-    // At least one record card with Edit/Delete
+      await sendFollowUp(answer);
+      // Wait for AI to process before sending next
+      await waitForAIReply(page);
+    }
+
+    // Wait for records panel
+    await expect(page.getByText(/\d+ strateg/i)).toBeVisible({ timeout: 120_000 });
     await expect(page.getByRole("button", { name: "Edit" }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete" }).first()).toBeVisible();
   });

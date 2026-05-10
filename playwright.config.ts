@@ -9,7 +9,6 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: "http://localhost:5173",
-    headless: true,
   },
   // Start both dev servers before running tests
   webServer: {

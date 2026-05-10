@@ -54,7 +54,7 @@ export function RecordList({ conversationPublicId, records, disabled }: RecordLi
 
   return (
     <div ref={listRef} className="space-y-3">
-      <div className="flex items-center justify-end gap-3 text-xs text-gray-400">
+      <div className="flex items-center justify-end gap-3 text-xs text-gray-400 dark:text-gray-500">
         <span className="flex items-center gap-1">
           Navigate <Kbd>J</Kbd><Kbd>K</Kbd>
         </span>

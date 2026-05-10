@@ -31,10 +31,10 @@ export function ChatThread({ messages, isStreaming, onEditMessage }: ChatThreadP
   if (messages.length === 0 && !isStreaming) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-center">
-        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
           {t("app.title")}
         </h2>
-        <p className="mt-2 max-w-md text-sm text-gray-500">
+        <p className="mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
           {t("chat.greeting")}
         </p>
       </div>
@@ -58,11 +58,11 @@ export function ChatThread({ messages, isStreaming, onEditMessage }: ChatThreadP
 
       {isStreaming && (
         <div className="flex items-start gap-2.5">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900 text-xs font-semibold text-primary-700 dark:text-primary-300">
             AI
           </div>
-          <div className="rounded-2xl rounded-tl-sm bg-gray-100 px-4 py-3">
-            <span className="flex gap-1 text-gray-400">
+          <div className="rounded-2xl rounded-tl-sm bg-gray-100 dark:bg-gray-800 px-4 py-3">
+            <span className="flex gap-1 text-gray-400 dark:text-gray-500">
               <span className="animate-bounce text-lg leading-none">.</span>
               <span className="animate-bounce text-lg leading-none" style={{ animationDelay: "0.15s" }}>.</span>
               <span className="animate-bounce text-lg leading-none" style={{ animationDelay: "0.3s" }}>.</span>

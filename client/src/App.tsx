@@ -18,6 +18,7 @@ import { ErrorBanner } from "./components/ErrorBanner.js";
 import { PromptForm } from "./components/PromptForm.js";
 import { RecordList } from "./components/RecordList.js";
 import { RecordSkeleton } from "./components/RecordSkeleton.js";
+import { ThemeToggle } from "./components/ThemeToggle.js";
 import { useChatStream } from "./hooks/useChatStream.js";
 import { useConversationId } from "./hooks/useConversationId.js";
 import { useConversation, useCreateConversation } from "./hooks/useConversations.js";
@@ -73,11 +74,14 @@ export function App() {
   if (!activeConversationId && !createMutation.isPending) {
     return (
       <div className="flex min-h-screen animate-fade-in flex-col items-center justify-center px-4">
+        <div className="absolute right-4 top-4">
+          <ThemeToggle />
+        </div>
         <header className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
             {t("app.title")}
           </h1>
-          <p className="mt-2 text-sm text-gray-500">{t("app.subtitle")}</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t("app.subtitle")}</p>
         </header>
         <div className="w-full max-w-2xl">
           <PromptForm
@@ -98,10 +102,10 @@ export function App() {
   return (
     <div className="flex h-screen animate-fade-in flex-col">
       {/* Header with New Chat button */}
-      <header className="flex shrink-0 items-center border-b border-gray-100 px-4 py-2.5">
+      <header className="flex shrink-0 items-center border-b border-gray-100 dark:border-gray-800 px-4 py-2.5">
         <button
           onClick={handleNewChat}
-          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -109,13 +113,12 @@ export function App() {
           {t("chat.newChat")}
         </button>
         <div className="flex-1 text-center">
-          <h1 className="text-lg font-semibold text-gray-900">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {t("app.title")}
           </h1>
-          <p className="text-xs text-gray-400">{t("app.subtitle")}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">{t("app.subtitle")}</p>
         </div>
-        {/* Spacer to balance the button on the left */}
-        <div className="w-[100px]" />
+        <ThemeToggle />
       </header>
 
       {isLoading && (
@@ -130,7 +133,7 @@ export function App() {
       )}
 
       {/* Main content: two-column when records exist */}
-      <div className={`flex min-h-0 flex-1 ${hasRecords ? "divide-x divide-gray-100" : ""}`}>
+      <div className={`flex min-h-0 flex-1 ${hasRecords ? "divide-x divide-gray-100 dark:divide-gray-800" : ""}`}>
         {/* Chat column: always visible during conversation */}
         <div className={`flex flex-col ${hasRecords ? "w-1/2" : "mx-auto w-full max-w-2xl"}`}>
           {/* Scrollable chat thread */}
@@ -145,7 +148,7 @@ export function App() {
           </div>
 
           {/* Chat input pinned at bottom */}
-          <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
+          <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-950">
             <ChatInput
               onSend={handleSubmit}
               disabled={chat.isStreaming}
@@ -155,11 +158,11 @@ export function App() {
 
         {/* Records panel: slides in from the right when strategies are ready */}
         <Activity mode={hasRecords ? "visible" : "hidden"}>
-          <div className="flex w-1/2 flex-col overflow-y-auto bg-gray-50/50 px-6 py-4">
-            <div className="mb-4 flex items-center gap-3 text-xs text-gray-400">
-              <div className="h-px flex-1 bg-gray-200" />
+          <div className="flex w-1/2 flex-col overflow-y-auto bg-gray-50/50 px-6 py-4 dark:bg-gray-900/50">
+            <div className="mb-4 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
               <span>{records.length} strategies</span>
-              <div className="h-px flex-1 bg-gray-200" />
+              <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
             </div>
             <RecordList
               conversationPublicId={conversationId}

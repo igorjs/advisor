@@ -18,15 +18,15 @@ export function ErrorBanner({ error, onRetry }: ErrorBannerProps) {
       : t("errors.generic");
 
   return (
-    <div className="rounded-md bg-red-50 p-4">
+    <div className="rounded-md bg-red-50 dark:bg-red-950 p-4">
       <div className="flex items-start">
         <div className="flex-1">
-          <p className="text-sm text-red-700">{message}</p>
+          <p className="text-sm text-red-700 dark:text-red-300">{message}</p>
         </div>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="ml-4 rounded-md bg-red-100 px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-200"
+            className="ml-4 rounded-md bg-red-100 dark:bg-red-900 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 transition-colors hover:bg-red-200 dark:hover:bg-red-800"
           >
             {t("errors.retry")}
           </button>

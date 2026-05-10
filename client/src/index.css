@@ -3,6 +3,9 @@
 
 @import "tailwindcss";
 
+/* Class-based dark mode: toggled via .dark on <html> */
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-primary-50: #eff6ff;
   --color-primary-100: #dbeafe;
@@ -25,5 +28,5 @@
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 antialiased;
+  @apply bg-gray-50 text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
 }

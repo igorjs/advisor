@@ -123,7 +123,7 @@ export function RecordCard({
     <div
       ref={cardRef}
       onClick={onFocus}
-      className={`animate-fade-in rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${focusRing} ${disabled ? "pointer-events-none opacity-50" : ""}`}
+      className={`animate-fade-in rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 shadow-sm transition-shadow hover:shadow-md ${focusRing} ${disabled ? "pointer-events-none opacity-50" : ""}`}
     >
       {isEditing ? (
         <div className="space-y-3" onKeyDown={handleEditKeyDown}>
@@ -134,7 +134,7 @@ export function RecordCard({
             aria-label={t("records.editTitle")}
             disabled={disabled}
             autoFocus
-            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm font-semibold focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-semibold focus:border-primary-500 dark:focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400 disabled:opacity-50"
           />
           <textarea
             value={editDescription}
@@ -142,7 +142,7 @@ export function RecordCard({
             aria-label={t("records.editDescription")}
             rows={3}
             disabled={disabled}
-            className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm focus:border-primary-500 dark:focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400 disabled:opacity-50"
           />
           <div className="flex gap-2">
             <button
@@ -156,7 +156,7 @@ export function RecordCard({
             <button
               onClick={handleCancel}
               disabled={disabled}
-              className="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
+              className="rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 disabled:opacity-50"
             >
               {t("records.cancel")}
               <Kbd>Esc</Kbd>
@@ -166,14 +166,14 @@ export function RecordCard({
       ) : (
         <>
           <div className="flex items-start justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               {record.title}
             </h3>
             <div className="ml-4 flex min-w-[140px] shrink-0 justify-end gap-1">
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={disabled}
-                className="rounded px-2 py-1 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                className="rounded px-2 py-1 text-xs text-gray-500 dark:text-gray-400 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50"
               >
                 {t("records.edit")}
                 {focused && <Kbd>E</Kbd>}
@@ -183,8 +183,8 @@ export function RecordCard({
                 disabled={disabled}
                 className={`rounded px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
                   isConfirmingDelete
-                    ? "bg-red-100 text-red-700"
-                    : "text-gray-500 hover:bg-red-50 hover:text-red-600"
+                    ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+                    : "text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-800 hover:text-red-600"
                 }`}
               >
                 {isConfirmingDelete ? (
@@ -202,7 +202,7 @@ export function RecordCard({
               </button>
             </div>
           </div>
-          <p className="mt-1 text-sm text-gray-600">{record.description}</p>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{record.description}</p>
         </>
       )}
     </div>

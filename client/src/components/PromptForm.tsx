@@ -54,7 +54,7 @@ export function PromptForm({ isReQuery, isSubmitting, conversationTitle, onSubmi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <label htmlFor="prompt-input" className="block text-sm font-medium text-gray-700">
+      <label htmlFor="prompt-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         {t("prompt.label")}
         <Kbd>/</Kbd>
       </label>
@@ -67,16 +67,16 @@ export function PromptForm({ isReQuery, isSubmitting, conversationTitle, onSubmi
         disabled={isSubmitting}
         rows={4}
         maxLength={5000}
-        className="w-full rounded-lg border border-gray-300 px-4 py-3 text-sm shadow-sm transition-colors placeholder:text-gray-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-50 disabled:text-gray-500"
+        className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-3 text-sm shadow-sm transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:border-primary-500 dark:focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:focus:ring-primary-400 disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400"
       />
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-400 dark:text-gray-500">
           {text.length} / 5000
         </span>
         <button
           type="submit"
           disabled={isSubmitting || text.trim().length === 0}
-          className="inline-flex items-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? (
             <>

@@ -76,18 +76,69 @@ API requests to the server on port 3001.
 | `TURSO_AUTH_TOKEN`   | No       | Turso authentication token                      |
 | `RATE_LIMIT_MAX`     | No       | Requests per minute per IP (defaults to 100)    |
 
-### LLM Provider
+### API Keys Setup
 
-The server uses the OpenAI SDK as a universal client. Any OpenAI-compatible
-provider works (OpenAI, OpenRouter, Google AI Studio, etc.) by setting
-`LLM_BASE_URL`.
+The app requires two API keys: one for the LLM and one for web search.
 
-### Database Modes
+**1. LLM provider (OpenRouter recommended)**
 
-By default, the app runs with a **local SQLite file** (no external services
-needed). To connect to **Turso** for production/edge deployment, set both
-`TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. The app then runs as an embedded
-replica with automatic sync.
+OpenRouter gives access to multiple models (GPT-4o, Claude, Llama, etc.)
+through a single API key with pay-as-you-go pricing.
+
+1. Create an account at [openrouter.ai](https://openrouter.ai/)
+2. Go to [Keys](https://openrouter.ai/keys) and click "Create Key"
+3. Copy the key and add to your `.env`:
+
+```env
+LLM_API_KEY=sk-or-v1-your-key-here
+LLM_BASE_URL=https://openrouter.ai/api/v1
+LLM_MODEL=openai/gpt-4o-mini
+```
+
+Alternatively, use OpenAI directly:
+
+1. Create an account at [platform.openai.com](https://platform.openai.com/)
+2. Go to [API Keys](https://platform.openai.com/api-keys) and create a key
+3. Add to `.env` (no `LLM_BASE_URL` needed, defaults to OpenAI):
+
+```env
+LLM_API_KEY=sk-your-key-here
+LLM_MODEL=gpt-4o-mini
+```
+
+**2. Jina Search API (web research)**
+
+The AI agent uses Jina to search the web for current tax rates and legislation.
+
+1. Create an account at [jina.ai](https://jina.ai/)
+2. Go to [API Keys](https://jina.ai/api-key) and generate a key
+3. Add to `.env`:
+
+```env
+JINA_API_KEY=jina_your-key-here
+```
+
+**3. Turso database (optional)**
+
+The app uses a local SQLite file by default, no setup needed. For
+production/edge deployment, Turso provides a hosted SQLite-compatible
+database with automatic replication.
+
+1. Create an account at [turso.tech](https://turso.tech/)
+2. Install the CLI: `brew install tursodatabase/tap/turso` (or see [docs](https://docs.turso.tech/cli/installation))
+3. Authenticate: `turso auth login`
+4. Create a database: `turso db create advisor`
+5. Get the connection URL: `turso db show advisor --url`
+6. Create an auth token: `turso db tokens create advisor`
+7. Add to `.env`:
+
+```env
+TURSO_DATABASE_URL=libsql://advisor-your-username.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
+```
+
+When both are set, the app runs as an embedded replica with automatic sync.
+When absent, it falls back to `file:data/advisor.db` (zero config).
 
 ## Architecture
 
